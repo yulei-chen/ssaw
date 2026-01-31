@@ -74,11 +74,12 @@ watch(profile, (p) => {
 }, { deep: true })
 
 const supabase = useSupabaseClient()
-const user = useSupabaseUser()
+const userId = useUserId()
 
 async function updateProfile() {
-  if (!user.value?.id) return
-  const { error } = await supabase.from('profiles').update({ display_name: displayName.value }).eq('id', user.value.id)
+  const uid = userId.value
+  if (!uid) return
+  const { error } = await supabase.from('profiles').update({ display_name: displayName.value }).eq('id', uid)
   if (error) {
     console.error('[updateProfile]', error)
     return
@@ -89,15 +90,16 @@ async function updateProfile() {
 async function onAvatarChange(e: Event) {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
-  if (!file || !user.value?.id) return
-  const path = `avatars/${user.value.id}/${file.name}`
+  const uid = userId.value
+  if (!file || !uid) return
+  const path = `avatars/${uid}/${file.name}`
   const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
   if (uploadError) {
     console.error('[onAvatarChange]', uploadError)
     return
   }
   const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
-  const { error } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.value.id)
+  const { error } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', uid)
   if (error) {
     console.error('[onAvatarChange]', error)
     return
@@ -107,8 +109,9 @@ async function onAvatarChange(e: Event) {
 }
 
 async function savePartnerEmail() {
-  if (!user.value?.id) return
-  const { error } = await supabase.from('profiles').update({ partner_email: partnerEmail.value || null }).eq('id', user.value.id)
+  const uid = userId.value
+  if (!uid) return
+  const { error } = await supabase.from('profiles').update({ partner_email: partnerEmail.value || null }).eq('id', uid)
   if (error) {
     console.error('[savePartnerEmail]', error)
     return
@@ -117,9 +120,10 @@ async function savePartnerEmail() {
 }
 
 async function clearPartner() {
-  if (!user.value?.id) return
+  const uid = userId.value
+  if (!uid) return
   partnerEmail.value = ''
-  const { error } = await supabase.from('profiles').update({ partner_email: null }).eq('id', user.value.id)
+  const { error } = await supabase.from('profiles').update({ partner_email: null }).eq('id', uid)
   if (error) {
     console.error('[clearPartner]', error)
     return

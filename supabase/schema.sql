@@ -67,6 +67,21 @@ create table if not exists public.comments (
   created_at timestamptz default now()
 );
 
+-- Helper: check mutual partnership without triggering RLS on profiles (avoids infinite recursion)
+create or replace function public.are_mutual_partners(my_id uuid, other_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.profiles me, public.profiles other
+    where me.id = my_id and other.id = other_id
+      and me.partner_email = other.email and other.partner_email = me.email
+  );
+$$;
+
 -- RLS
 alter table public.profiles enable row level security;
 alter table public.time_blocks enable row level security;
@@ -78,12 +93,7 @@ alter table public.comments enable row level security;
 create policy "Users can read own profile" on public.profiles for select using (auth.uid() = id);
 create policy "Users can update own profile" on public.profiles for update using (auth.uid() = id);
 create policy "Users can read partner profile" on public.profiles for select
-  using (
-    exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.partner_email = profiles.email and profiles.partner_email = p.email
-    )
-  );
+  using (public.are_mutual_partners(auth.uid(), id));
 
 -- Time blocks: own + partner's (when matched)
 create policy "Users can crud own time_blocks" on public.time_blocks

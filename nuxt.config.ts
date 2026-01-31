@@ -19,8 +19,10 @@ export default defineNuxtConfig({
     },
   },
   routeRules: {
-    // OAuth callback must run on client so hash/query params are available
+    // Only login benefits from SSR; everything else is CSR
+    '/login': { ssr: true },
     '/confirm': { ssr: false },
+    '/**': { ssr: false },
   },
   pwa: {
     registerType: 'autoUpdate',

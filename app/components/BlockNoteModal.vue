@@ -97,18 +97,19 @@ function onFilesChange(e: Event) {
   previewUrls.value = files.value.map((f) => URL.createObjectURL(f))
 }
 
-const user = useSupabaseUser()
+const userId = useUserId()
 const supabase = useSupabaseClient()
 
 async function save() {
-  if (!props.timeBlock || !user.value?.id) return
+  const uid = userId.value
+  if (!props.timeBlock || !uid) return
   const { startTime, endTime, blockId } = props.timeBlock
   let timeBlockId = blockId
   if (!timeBlockId) {
     const { data: newBlock, error: blockError } = await supabase
       .from('time_blocks')
       .insert({
-        user_id: user.value.id,
+        user_id: uid,
         day: props.date,
         start_time: startTime,
         end_time: endTime,
@@ -131,8 +132,10 @@ async function save() {
   if (noteId && files.value.length) {
     const bucket = supabase.storage.from('block-images')
     for (let i = 0; i < files.value.length; i++) {
-      const path = `${user.value.id}/${noteId}/${files.value[i].name}`
-      await bucket.upload(path, files.value[i], { upsert: true })
+      const file = files.value[i]
+      if (!file) continue
+      const path = `${uid}/${noteId}/${file.name}`
+      await bucket.upload(path, file, { upsert: true })
       const { data: urlData } = bucket.getPublicUrl(path)
       await supabase.from('block_note_attachments').insert({ block_note_id: noteId, file_path: urlData.publicUrl })
     }

@@ -39,11 +39,12 @@ const email = ref('')
 
 onClickOutside(modalRef, () => emit('close'))
 const supabase = useSupabaseClient()
-const user = useSupabaseUser()
+const userId = useUserId()
 
 async function submit() {
-  if (!email.value.trim() || !user.value?.id) return
-  await supabase.from('profiles').update({ partner_email: email.value.trim() }).eq('id', user.value.id)
+  const uid = userId.value
+  if (!email.value.trim() || !uid) return
+  await supabase.from('profiles').update({ partner_email: email.value.trim() }).eq('id', uid)
   emit('matched')
   emit('close')
 }

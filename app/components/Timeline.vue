@@ -25,7 +25,7 @@
         :key="block.id"
         class="absolute left-1 right-1 rounded border border-slate-300 bg-slate-100 dark:border-slate-600 dark:bg-slate-700"
         :style="blockStyle(block)"
-        :class="mode === 'partner' ? 'cursor-pointer hover:ring-2 hover:ring-slate-400' : ''"
+        :class="'cursor-pointer hover:ring-2 hover:ring-slate-400'"
         @click="onBlockClick(block)"
       >
         <div class="truncate px-2 py-1 text-xs font-medium">
@@ -146,14 +146,6 @@ function onMouseUp() {
 }
 
 function onBlockClick(block: TimeBlockWithNote) {
-  if (props.mode === 'partner') {
-    const note = blockNote(block)
-    if (note) {
-      emit('blockClick', block)
-    }
-  } else {
-    const note = blockNote(block)
-    emit('blockClick', block)
-  }
+  emit('blockClick', block)
 }
 </script>

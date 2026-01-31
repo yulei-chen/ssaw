@@ -1,21 +1,22 @@
 import type { Profile } from '~/types'
 
 export function useProfile() {
-  const user = useSupabaseUser()
+  const userId = useUserId()
   const supabase = useSupabaseClient()
 
   const { data: profile, refresh } = useAsyncData(
-    () => `profile-${user.value?.id ?? 'anon'}`,
+    () => `profile-${userId.value ?? 'anon'}`,
     async () => {
-      if (!user.value?.id) return null
-      const { data, error } = await supabase.from('profiles').select('*').eq('id', user.value.id).single()
+      const uid = userId.value
+      if (!uid) return null
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', uid).single()
       if (error) {
         console.error('[useProfile]', error)
         return null
       }
       return data as Profile | null
     },
-    { watch: [user] },
+    { watch: [userId] },
   )
 
   return { data: profile, refresh }

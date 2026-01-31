@@ -34,7 +34,6 @@ const props = defineProps<{ blockNoteId: string }>()
 const emit = defineEmits<{ added: [] }>()
 
 const supabase = useSupabaseClient()
-const user = useSupabaseUser()
 const body = ref('')
 
 const blockNoteIdRef = toRef(props, 'blockNoteId')
@@ -55,11 +54,13 @@ const { data: comments, refresh } = useAsyncData(
   { watch: [blockNoteIdRef] },
 )
 
+const userId = useUserId()
 async function addComment() {
-  if (!body.value.trim() || !user.value?.id) return
+  const uid = userId.value
+  if (!body.value.trim() || !uid) return
   await supabase.from('comments').insert({
     block_note_id: props.blockNoteId,
-    user_id: user.value.id,
+    user_id: uid,
     body: body.value.trim(),
   })
   body.value = ''

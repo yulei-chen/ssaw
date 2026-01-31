@@ -6,7 +6,7 @@
       <Timeline
         mode="own"
         :date="selectedDate"
-        :blocks="myBlocks"
+        :blocks="myBlocks ?? []"
         :loading="loadingMyBlocks"
         label="You"
         @create-block="openBlockNoteModal"
@@ -16,7 +16,7 @@
         v-if="partner"
         mode="partner"
         :date="selectedDate"
-        :blocks="partnerBlocks"
+        :blocks="partnerBlocks ?? []"
         :loading="loadingPartnerBlocks"
         label="Partner"
         @block-click="openPartnerBlockModal"
@@ -30,7 +30,7 @@
     />
     <PartnerBlockModal
       v-model:open="partnerBlockOpen"
-      :block-note="viewingPartnerNote"
+      :block="viewingPartnerBlock"
       @comment-added="onCommentAdded"
     />
   </div>
@@ -50,9 +50,9 @@ const myUserId = computed(() => profile.value?.id ?? '')
 const partnerUserId = computed(() => partner.value?.id ?? '')
 
 const blockNoteOpen = ref(false)
-const editingBlock = ref<{ startTime: string; endTime: string } | null>(null)
+const editingBlock = ref<{ startTime: string; endTime: string; blockId?: string } | null>(null)
 const partnerBlockOpen = ref(false)
-const viewingPartnerNote = ref<{ id: string; content: string; attachments: { file_path: string }[] } | null>(null)
+const viewingPartnerBlock = ref<import('~/types').TimeBlockWithNote | null>(null)
 
 const { data: myBlocks, refresh: refreshMyBlocks, pending: loadingMyBlocks } = useTimeBlocks(myUserId, selectedDate)
 const { data: partnerBlocks, refresh: refreshPartnerBlocks, pending: loadingPartnerBlocks } = useTimeBlocks(partnerUserId, selectedDate)
@@ -85,14 +85,8 @@ function openBlockNoteModal(payload?: { startTime: string; endTime: string } | {
   blockNoteOpen.value = true
 }
 
-function openPartnerBlockModal(block: { block_notes?: { id: string; content: string; block_note_attachments?: { file_path: string }[] }[] }) {
-  const note = block.block_notes?.[0]
-  if (!note) return
-  viewingPartnerNote.value = {
-    id: note.id,
-    content: note.content ?? '',
-    attachments: note.block_note_attachments ?? [],
-  }
+function openPartnerBlockModal(block: import('~/types').TimeBlockWithNote) {
+  viewingPartnerBlock.value = block
   partnerBlockOpen.value = true
 }
 

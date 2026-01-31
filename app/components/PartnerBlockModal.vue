@@ -2,12 +2,15 @@
   <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="open = false">
     <div ref="modalRef" class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl dark:bg-slate-800">
       <h2 class="mb-4 text-lg font-semibold">Partner's notes</h2>
-      <div v-if="blockNote" class="space-y-4">
+      <div v-if="block" class="space-y-4">
+        <div class="mb-2 text-sm text-slate-500">
+          {{ formatTime(block.start_time) }} – {{ formatTime(block.end_time) }}
+        </div>
         <div class="rounded-lg bg-slate-100 p-4 dark:bg-slate-700">
-          <p class="whitespace-pre-wrap text-sm">{{ blockNote.content || 'No notes.' }}</p>
-          <div v-if="blockNote.attachments?.length" class="mt-3 flex flex-wrap gap-2">
+          <p class="whitespace-pre-wrap text-sm">{{ noteContent || 'No notes.' }}</p>
+          <div v-if="noteAttachments?.length" class="mt-3 flex flex-wrap gap-2">
             <img
-              v-for="(att, i) in blockNote.attachments"
+              v-for="(att, i) in noteAttachments"
               :key="i"
               :src="att.file_path"
               alt="Attachment"
@@ -15,9 +18,9 @@
             />
           </div>
         </div>
-        <div>
+        <div v-if="note?.id">
           <h3 class="mb-2 text-sm font-medium">Comments</h3>
-          <CommentList :block-note-id="blockNote.id" @added="$emit('commentAdded')" />
+          <CommentList :block-note-id="note.id" @added="$emit('commentAdded')" />
         </div>
       </div>
       <button
@@ -32,9 +35,11 @@
 </template>
 
 <script setup lang="ts">
+import type { TimeBlockWithNote } from '~/types'
+
 const props = defineProps<{
   open: boolean
-  blockNote: { id: string; content: string; attachments?: { file_path: string }[] } | null
+  block: TimeBlockWithNote | null
 }>()
 
 const emit = defineEmits<{ 'update:open': [value: boolean]; commentAdded: [] }>()
@@ -49,5 +54,14 @@ onClickOutside(modalRef, () => {
   if (open.value) open.value = false
 })
 
-const blockNote = computed(() => props.blockNote)
+const block = computed(() => props.block)
+const note = computed(() => props.block?.block_notes?.[0])
+const noteContent = computed(() => note.value?.content ?? '')
+const noteAttachments = computed(() => note.value?.block_note_attachments ?? [])
+
+function formatTime(t: string) {
+  const [h, m] = t.split(':').map(Number)
+  if (m === 0) return `${h}:00`
+  return `${h}:${String(m).padStart(2, '0')}`
+}
 </script>
