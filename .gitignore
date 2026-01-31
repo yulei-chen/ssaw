@@ -1,0 +1,20 @@
+# Nuxt
+.nuxt
+.output
+.data
+*.log
+node_modules
+
+# Env
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
