@@ -47,35 +47,6 @@ Spring, Summer, Autumn, Winter — day timelines for long-distance couples.
 
 ## Deploy to Netlify
 
-### Option A: Netlify CLI
-
-1. **Install and log in** (one-time):
-
-   ```bash
-   npm install -g netlify-cli
-   netlify login
-   ```
-
-2. **Link this repo** (one-time per site):
-
-   ```bash
-   netlify link
-   ```
-
-   Choose “Create & configure a new site” or “Link to existing site” and follow the prompts.
-
-3. **Deploy** — Build and deploy to production:
-
-   ```bash
-   netlify deploy --build --prod
-   ```
-
-   For a draft (preview) deploy without publishing: `netlify deploy --build`.
-
-   Ensure `NUXT_PUBLIC_SUPABASE_URL` and `NUXT_PUBLIC_SUPABASE_KEY` are set in the Netlify site’s environment variables (Site settings → Environment variables), or the build may fail.
-
-### Option B: Git-based deploy
-
 1. **Connect repo** — New site → Import from Git → choose this repo. Netlify will use `netlify.toml` for build settings.
 
 2. **Environment variables** — In Site settings → Environment variables, add:

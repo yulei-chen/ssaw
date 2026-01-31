@@ -39,6 +39,7 @@ export default defineNuxtConfig({
     workbox: {
       // Avoid terser early-exit error in some environments
       globPatterns: ['**/*.{js,css,html,png,ico,svg,woff2}'],
+      maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MiB (default is 2 MiB)
     },
   },
   app: {

@@ -4,6 +4,7 @@
 .data
 *.log
 node_modules
+dist
 
 # Env
 .env
@@ -21,3 +22,8 @@ node_modules
 
 # Supabase
 supabase/.temp/
+
+# Local Netlify folder
+.netlify
+
+.DS_Store
