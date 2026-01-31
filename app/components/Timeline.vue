@@ -48,7 +48,7 @@
         <div
           v-for="(block, index) in blocks"
           :key="block.id"
-          class="absolute left-1 right-1 rounded border border-slate-300"
+          class="absolute left-1 right-1 overflow-hidden rounded border border-slate-300"
           :style="blockStyle(block)"
           :class="[blockColorClass(index), 'cursor-pointer transition-shadow hover:ring-2 hover:ring-slate-200 hover:ring-offset-2 hover:ring-offset-white hover:shadow-md']"
           @click="onBlockClick(block)"
@@ -56,8 +56,17 @@
           <div class="truncate px-2 py-1 text-xs font-medium text-slate-800">
             {{ formatTime(block.start_time) }} – {{ formatTime(block.end_time) }}
           </div>
-          <div class="truncate px-2 pb-1 text-xs text-slate-600">
+          <div class="truncate px-2 text-xs text-slate-600">
             {{ blockNote(block)?.content || 'No note' }}
+          </div>
+          <div v-if="blockNoteImageUrls(block).length" class="flex flex-wrap gap-0.5 px-2 pb-1">
+            <img
+              v-for="url in blockNoteImageUrls(block)"
+              :key="url"
+              :src="url"
+              alt=""
+              class="h-12 w-12 shrink-0 rounded object-cover"
+            />
           </div>
         </div>
         <!-- Drag preview -->
@@ -76,6 +85,8 @@
 
 <script setup lang="ts">
 import type { TimeBlockWithNote } from '~/types'
+
+const supabase = useSupabaseClient()
 
 const props = defineProps<{
   mode: 'own' | 'partner'
@@ -157,11 +168,18 @@ function formatTime(t: string) {
   return `${h}:${String(m).padStart(2, '0')}`
 }
 
-function blockNote(block: TimeBlockWithNote): { content?: string } | null {
+function blockNote(block: TimeBlockWithNote): { content?: string; block_note_attachments?: { file_path: string }[] } | null {
   const notes = block.block_notes
   if (!notes) return null
   // Supabase returns single object for 1:1 relation, array for 1:many
   return Array.isArray(notes) ? notes[0] ?? null : notes
+}
+
+function blockNoteImageUrls(block: TimeBlockWithNote): string[] {
+  const note = blockNote(block)
+  const attachments = note?.block_note_attachments
+  if (!attachments || !Array.isArray(attachments) || attachments.length === 0) return []
+  return attachments.map((a) => supabase.storage.from('block-images').getPublicUrl(a.file_path).data.publicUrl)
 }
 
 function onMouseDown(e: MouseEvent) {

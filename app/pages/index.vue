@@ -31,6 +31,7 @@
       :time-block="editingBlock"
       :date="selectedDate"
       @saved="onBlockSaved"
+      @deleted="onBlockDeleted"
     />
     <PartnerBlockModal
       v-model:open="partnerBlockOpen"
@@ -95,6 +96,12 @@ function openPartnerBlockModal(block: import('~/types').TimeBlockWithNote) {
 }
 
 function onBlockSaved() {
+  blockNoteOpen.value = false
+  editingBlock.value = null
+  refreshMyBlocks()
+}
+
+function onBlockDeleted() {
   blockNoteOpen.value = false
   editingBlock.value = null
   refreshMyBlocks()

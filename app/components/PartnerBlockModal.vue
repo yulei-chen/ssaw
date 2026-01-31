@@ -8,11 +8,11 @@
         </div>
         <div class="rounded-lg bg-slate-100 p-4">
           <p class="whitespace-pre-wrap text-sm text-slate-700">{{ noteContent || 'No notes.' }}</p>
-          <div v-if="noteAttachments?.length" class="mt-3 flex flex-wrap gap-2">
+          <div v-if="noteAttachmentUrls.length" class="mt-3 flex flex-wrap gap-2">
             <img
-              v-for="(att, i) in noteAttachments"
-              :key="i"
-              :src="att.file_path"
+              v-for="url in noteAttachmentUrls"
+              :key="url"
+              :src="url"
               alt="Attachment"
               class="h-24 w-24 rounded object-cover"
             />
@@ -36,6 +36,8 @@
 
 <script setup lang="ts">
 import type { TimeBlockWithNote } from '~/types'
+
+const supabase = useSupabaseClient()
 
 const props = defineProps<{
   open: boolean
@@ -62,6 +64,14 @@ const note = computed(() => {
 })
 const noteContent = computed(() => note.value?.content ?? '')
 const noteAttachments = computed(() => note.value?.block_note_attachments ?? [])
+const noteAttachmentUrls = computed(() => {
+  const attachments = noteAttachments.value
+  if (!Array.isArray(attachments) || attachments.length === 0) return []
+  return attachments
+    .map((a) => a?.file_path)
+    .filter((path): path is string => Boolean(path))
+    .map((path) => supabase.storage.from('block-images').getPublicUrl(path).data.publicUrl)
+})
 
 function formatTime(t: string) {
   const [h, m] = t.split(':').map(Number)

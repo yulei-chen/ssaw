@@ -29,7 +29,7 @@ export default defineNuxtConfig({
     manifest: {
       name: 'SSAW',
       short_name: 'SSAW',
-      description: 'Spring, Summer, Autumn, Winter — for long-distance couples',
+      description: "Every season, every day — staying close when you're far apart",
       theme_color: '#ffffff',
       icons: [
         { src: '/pwa-192.png', sizes: '192x192', type: 'image/png' },
@@ -44,7 +44,8 @@ export default defineNuxtConfig({
   app: {
     head: {
       title: 'SSAW',
-      meta: [{ name: 'description', content: 'Day timelines for long-distance couples' }],
+      link: [{ rel: 'icon', type: 'image/png', href: '/favicon.png' }],
+      meta: [{ name: 'description', content: "Every season, every day — staying close when you're far apart" }],
     },
   },
 })
