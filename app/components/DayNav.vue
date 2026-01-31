@@ -1,22 +1,21 @@
 <template>
-  <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-800">
+  <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-2">
     <button
       type="button"
-      class="rounded px-3 py-1.5 text-sm hover:bg-slate-100 dark:hover:bg-slate-700"
+      class="rounded px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
       @click="prevDay"
     >
-      ← Previous
+      ←
     </button>
-    <span class="font-medium">
+    <span class="font-medium text-slate-900">
       {{ isToday ? 'Today' : formattedDate }}
-      <span v-if="!isToday" class="ml-1 text-slate-500">({{ date }})</span>
     </span>
     <button
       type="button"
-      class="rounded px-3 py-1.5 text-sm hover:bg-slate-100 dark:hover:bg-slate-700"
+      class="rounded px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
       @click="nextDay"
     >
-      Next →
+      →
     </button>
   </div>
 </template>

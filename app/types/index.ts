@@ -15,8 +15,11 @@ export interface TimeBlock {
   created_at: string
 }
 
+/** Supabase returns block_notes as object for 1:1 relation, or array for 1:many */
 export interface TimeBlockWithNote extends TimeBlock {
-  block_notes?: (BlockNote & { block_note_attachments?: { file_path: string }[] })[]
+  block_notes?:
+    | (BlockNote & { block_note_attachments?: { file_path: string }[] })[]
+    | (BlockNote & { block_note_attachments?: { file_path: string }[] })
 }
 
 export interface BlockNote {

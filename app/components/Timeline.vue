@@ -1,47 +1,73 @@
 <template>
-  <div class="rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
-    <div class="border-b border-slate-200 px-4 py-2 font-medium dark:border-slate-700">{{ label }}</div>
-    <div
-      ref="trackRef"
-      class="relative min-h-[600px] select-none"
-      :class="{ 'cursor-crosshair': mode === 'own' }"
-      @mousedown="onMouseDown"
-      @mousemove="onMouseMove"
-      @mouseup="onMouseUp"
-      @mouseleave="onMouseUp"
-    >
-      <!-- Time grid (every hour) -->
-      <div class="absolute inset-0 flex flex-col">
+  <div class="rounded-lg border border-slate-200 bg-white">
+    <div class="flex items-center gap-2 border-b border-slate-200 px-4 py-2">
+      <div class="h-8 w-8 flex-shrink-0 overflow-hidden rounded-full bg-slate-100">
+        <img
+          v-if="avatarUrl"
+          :src="avatarUrl"
+          :alt="label"
+          class="h-full w-full object-cover"
+        />
+        <span v-else class="flex h-full w-full items-center justify-center text-sm font-medium text-slate-400">{{ label.charAt(0) }}</span>
+      </div>
+      <span class="font-medium text-slate-900">{{ label }}</span>
+    </div>
+    <div class="flex">
+      <!-- Hour labels -->
+      <div class="flex w-6 flex-shrink-0 flex-col border-r border-slate-200 bg-slate-50/50">
         <div
           v-for="h in 24"
           :key="h"
-          class="flex-1 border-t border-slate-100 dark:border-slate-700"
-          :data-hour="h - 1"
-        />
-      </div>
-      <!-- Blocks -->
-      <div
-        v-for="block in blocks"
-        :key="block.id"
-        class="absolute left-1 right-1 rounded border border-slate-300 bg-slate-100 dark:border-slate-600 dark:bg-slate-700"
-        :style="blockStyle(block)"
-        :class="'cursor-pointer hover:ring-2 hover:ring-slate-400'"
-        @click="onBlockClick(block)"
-      >
-        <div class="truncate px-2 py-1 text-xs font-medium">
-          {{ formatTime(block.start_time) }} – {{ formatTime(block.end_time) }}
-        </div>
-        <div v-if="blockNote(block)" class="truncate px-2 pb-1 text-xs text-slate-600 dark:text-slate-300">
-          {{ blockNote(block)?.content || 'No notes' }}
+          class="flex-1 border-t border-slate-100 px-1 py-0.5 text-right text-xs text-slate-500"
+          :style="{ height: `${PIXELS_PER_HOUR}px` }"
+        >
+          {{ String(h - 1).padStart(2, '0') }}
         </div>
       </div>
-      <!-- Drag preview -->
+      <!-- Timeline track -->
       <div
-        v-if="dragPreview"
-        class="absolute left-1 right-1 rounded border-2 border-dashed border-slate-400 bg-slate-200/50 dark:border-slate-500 dark:bg-slate-600/50"
-        :style="dragPreviewStyle"
+        ref="trackRef"
+        class="relative flex-1 select-none bg-white"
+        :class="{ 'cursor-crosshair': mode === 'own' }"
+        :style="{ height: `${24 * PIXELS_PER_HOUR}px` }"
+        @mousedown="onMouseDown"
+        @mousemove="onMouseMove"
+        @mouseup="onMouseUp"
+        @mouseleave="onMouseUp"
       >
-        <span class="px-2 py-1 text-xs">{{ formatTime(dragPreview.start) }} – {{ formatTime(dragPreview.end) }}</span>
+        <!-- Time grid (every hour) -->
+        <div class="absolute inset-0 flex flex-col">
+          <div
+            v-for="h in 24"
+            :key="h"
+            class="flex-1 border-t border-slate-100"
+            :data-hour="h - 1"
+          />
+        </div>
+        <!-- Blocks -->
+        <div
+          v-for="(block, index) in blocks"
+          :key="block.id"
+          class="absolute left-1 right-1 rounded border border-slate-300"
+          :style="blockStyle(block)"
+          :class="[blockColorClass(index), 'cursor-pointer transition-shadow hover:ring-2 hover:ring-slate-200 hover:ring-offset-2 hover:ring-offset-white hover:shadow-md']"
+          @click="onBlockClick(block)"
+        >
+          <div class="truncate px-2 py-1 text-xs font-medium text-slate-800">
+            {{ formatTime(block.start_time) }} – {{ formatTime(block.end_time) }}
+          </div>
+          <div class="truncate px-2 pb-1 text-xs text-slate-600">
+            {{ blockNote(block)?.content || 'No note' }}
+          </div>
+        </div>
+        <!-- Drag preview -->
+        <div
+          v-if="dragPreview"
+          class="absolute left-1 right-1 rounded border-2 border-dashed border-slate-400 bg-slate-200/60"
+          :style="dragPreviewStyle"
+        >
+          <span class="px-2 py-1 text-xs text-slate-700">{{ formatTime(dragPreview.start) }} – {{ formatTime(dragPreview.end) }}</span>
+        </div>
       </div>
     </div>
     <div v-if="loading" class="flex items-center justify-center py-8 text-slate-500">Loading…</div>
@@ -57,6 +83,7 @@ const props = defineProps<{
   blocks: TimeBlockWithNote[]
   loading?: boolean
   label: string
+  avatarUrl?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -99,6 +126,23 @@ function blockStyle(block: TimeBlockWithNote) {
   return { top: `${top}px`, height: `${Math.max(height, 20)}px` }
 }
 
+const blockColors = [
+  'bg-sky-100',
+  'bg-amber-100',
+  'bg-emerald-100',
+  'bg-violet-100',
+  'bg-rose-100',
+  'bg-pink-100',
+  'bg-indigo-100',
+  'bg-cyan-100',
+  'bg-lime-100',
+  'bg-orange-100',
+]
+
+function blockColorClass(index: number): string {
+  return blockColors[index % blockColors.length]
+}
+
 const dragPreviewStyle = computed(() => {
   const p = dragPreview.value
   if (!p) return {}
@@ -113,9 +157,11 @@ function formatTime(t: string) {
   return `${h}:${String(m).padStart(2, '0')}`
 }
 
-function blockNote(block: TimeBlockWithNote) {
+function blockNote(block: TimeBlockWithNote): { content?: string } | null {
   const notes = block.block_notes
-  return notes?.[0]
+  if (!notes) return null
+  // Supabase returns single object for 1:1 relation, array for 1:many
+  return Array.isArray(notes) ? notes[0] ?? null : notes
 }
 
 function onMouseDown(e: MouseEvent) {

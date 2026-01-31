@@ -1,48 +1,48 @@
 <template>
   <div class="space-y-8">
-    <h1 class="text-xl font-semibold">Settings</h1>
+    <h1 class="text-xl font-semibold text-slate-900">Settings</h1>
     <section class="space-y-4">
-      <h2 class="text-sm font-medium text-slate-500 dark:text-slate-400">Profile</h2>
+      <h2 class="text-sm font-medium text-slate-500">Profile</h2>
       <div class="flex items-center gap-4">
-        <div class="h-16 w-16 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+        <div class="h-16 w-16 overflow-hidden rounded-full bg-slate-100">
           <img
             v-if="profile?.avatar_url"
             :src="profile.avatar_url"
             alt="Avatar"
             class="h-full w-full object-cover"
           />
-          <span v-else class="flex h-full w-full items-center justify-center text-2xl text-slate-500">?</span>
+          <span v-else class="flex h-full w-full items-center justify-center text-2xl text-slate-400">?</span>
         </div>
         <div class="flex-1 space-y-2">
           <input
             v-model="displayName"
             type="text"
             placeholder="Display name"
-            class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
+            class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400"
             @blur="updateProfile"
           />
           <input
             type="file"
             accept="image/*"
-            class="text-sm"
+            class="text-sm text-slate-600"
             @change="onAvatarChange"
           />
         </div>
       </div>
     </section>
     <section class="space-y-4">
-      <h2 class="text-sm font-medium text-slate-500 dark:text-slate-400">Partner</h2>
-      <p v-if="profile?.partner_email" class="text-sm">Matched with {{ profile.partner_email }}</p>
+      <h2 class="text-sm font-medium text-slate-500">Partner</h2>
+      <p v-if="profile?.partner_email" class="text-sm text-slate-700">Matched with {{ profile.partner_email }}</p>
       <form class="flex gap-2" @submit.prevent="savePartnerEmail">
         <input
           v-model="partnerEmail"
           type="email"
           placeholder="Partner's email"
-          class="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
+          class="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400"
         />
         <button
           type="submit"
-          class="rounded-lg bg-slate-800 px-4 py-2 text-white hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600"
+          class="rounded-lg bg-slate-800 px-4 py-2 text-white hover:bg-slate-700"
         >
           Save
         </button>
@@ -50,7 +50,7 @@
       <button
         v-if="profile?.partner_email"
         type="button"
-        class="text-sm text-red-600 hover:underline dark:text-red-400"
+        class="text-sm text-red-600 hover:underline"
         @click="clearPartner"
       >
         Unmatch

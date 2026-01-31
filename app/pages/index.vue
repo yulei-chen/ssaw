@@ -2,25 +2,29 @@
   <div>
     <PartnerMatchModal v-if="showPartnerModal" @close="showPartnerModal = false" @matched="onMatched" />
     <DayNav v-model:date="selectedDate" class="mb-4" />
-    <div class="grid gap-6 md:grid-cols-2">
-      <Timeline
-        mode="own"
-        :date="selectedDate"
-        :blocks="myBlocks ?? []"
-        :loading="loadingMyBlocks"
-        label="You"
-        @create-block="openBlockNoteModal"
-        @block-click="openBlockNoteModal"
-      />
-      <Timeline
-        v-if="partner"
-        mode="partner"
-        :date="selectedDate"
-        :blocks="partnerBlocks ?? []"
-        :loading="loadingPartnerBlocks"
-        label="Partner"
-        @block-click="openPartnerBlockModal"
-      />
+    <div class="overflow-x-auto">
+      <div class="grid grid-cols-2 gap-3">
+        <Timeline
+          mode="own"
+          :date="selectedDate"
+          :blocks="myBlocks ?? []"
+          :loading="loadingMyBlocks"
+          label="You"
+          :avatar-url="profile?.avatar_url"
+          @create-block="openBlockNoteModal"
+          @block-click="openBlockNoteModal"
+        />
+        <Timeline
+          v-if="partner"
+          mode="partner"
+          :date="selectedDate"
+          :blocks="partnerBlocks ?? []"
+          :loading="loadingPartnerBlocks"
+          label="Partner"
+          :avatar-url="partner?.avatar_url"
+          @block-click="openPartnerBlockModal"
+        />
+      </div>
     </div>
     <BlockNoteModal
       v-model:open="blockNoteOpen"

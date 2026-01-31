@@ -82,6 +82,20 @@ as $$
   );
 $$;
 
+-- Helper: check if a time_block belongs to a user (bypasses RLS for nested selects)
+create or replace function public.owns_time_block(block_id uuid, check_user_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.time_blocks
+    where id = block_id and user_id = check_user_id
+  );
+$$;
+
 -- RLS
 alter table public.profiles enable row level security;
 alter table public.time_blocks enable row level security;
@@ -107,18 +121,16 @@ create policy "Users can read partner time_blocks" on public.time_blocks for sel
     )
   );
 
--- Block notes: via time_blocks ownership
+-- Block notes: via time_blocks ownership (using security definer function to avoid RLS recursion)
 create policy "Users can crud own block_notes" on public.block_notes for all
-  using (
-    exists (select 1 from public.time_blocks tb where tb.id = block_notes.time_block_id and tb.user_id = auth.uid())
-  );
+  using (public.owns_time_block(time_block_id, auth.uid()))
+  with check (public.owns_time_block(time_block_id, auth.uid()));
 create policy "Users can read partner block_notes" on public.block_notes for select
   using (
     exists (
       select 1 from public.time_blocks tb
-      join public.profiles me on me.id = auth.uid()
-      join public.profiles other on other.id = tb.user_id
-      where tb.id = block_notes.time_block_id and me.partner_email = other.email and other.partner_email = me.email
+      where tb.id = block_notes.time_block_id
+        and public.are_mutual_partners(auth.uid(), tb.user_id)
     )
   );
 

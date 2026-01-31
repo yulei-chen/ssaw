@@ -30,7 +30,7 @@ export default defineNuxtConfig({
       name: 'SSAW',
       short_name: 'SSAW',
       description: 'Spring, Summer, Autumn, Winter — for long-distance couples',
-      theme_color: '#0f172a',
+      theme_color: '#ffffff',
       icons: [
         { src: '/pwa-192.png', sizes: '192x192', type: 'image/png' },
         { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },
@@ -40,7 +40,6 @@ export default defineNuxtConfig({
       // Avoid terser early-exit error in some environments
       globPatterns: ['**/*.{js,css,html,png,ico,svg,woff2}'],
     },
-    dev: false,
   },
   app: {
     head: {

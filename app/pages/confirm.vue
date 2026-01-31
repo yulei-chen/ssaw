@@ -1,6 +1,6 @@
 <template>
   <div class="flex min-h-[60vh] flex-col items-center justify-center">
-    <p class="text-slate-500 dark:text-slate-400">Completing sign in…</p>
+    <p class="text-slate-500">Completing sign in…</p>
   </div>
 </template>
 
