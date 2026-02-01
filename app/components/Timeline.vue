@@ -48,7 +48,7 @@
         <!-- Current time line (only when viewing today in display timezone) -->
         <div
           v-if="currentTimeLine"
-          class="pointer-events-none absolute left-0 right-0 z-3 flex items-center"
+          class="pointer-events-none absolute left-0 right-0 z-10 flex items-center"
           :style="{ top: `${currentTimeLine.top}px` }"
         >
           <div class="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-red-500 shadow-sm ring-2 ring-white" />

@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-white text-slate-900">
-    <header class="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <header class="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
       <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <NuxtLink to="/" class="font-semibold text-slate-900">SSAW</NuxtLink>
         <nav class="flex items-center gap-4">
