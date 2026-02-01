@@ -6,7 +6,10 @@
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
-    "preview": "nuxt preview"
+    "preview": "nuxt preview",
+    "preview:prod": "nuxt preview --dotenv .env.production",
+    "db:push:dev": "supabase link --project-ref uigaswnfltaapzkksccb && supabase db push",
+    "db:push:prod": "supabase link --project-ref bxghzaccnlmcyegbunal && supabase db push"
   },
   "dependencies": {
     "@nuxtjs/supabase": "^2.0.0",
@@ -20,6 +23,7 @@
   },
   "devDependencies": {
     "@nuxt/devtools": "^1.6.0",
+    "supabase": "^2.74.5",
     "typescript": "^5.6.0"
   }
 }

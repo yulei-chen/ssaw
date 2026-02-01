@@ -26,8 +26,8 @@ Spring, Summer, Autumn, Winter — day timelines for long-distance couples.
 
    - Create a project at [supabase.com](https://supabase.com)
    - Enable **Google** in Authentication → Providers
-   - Run the SQL in `supabase/schema.sql` in the SQL editor
-   - Create Storage buckets: **avatars** (public) and **block-images** (public), with RLS as needed
+   - Create Storage buckets: **avatars** (public) and **block-images** (public)
+   - Apply schema: either run `supabase db push` (see [Dev vs prod](#dev-vs-prod)) or run `supabase/schema.sql` + `supabase/storage-policies.sql` in the SQL editor
    - Copy project URL and anon key into `.env`:
 
    ```env
@@ -58,7 +58,40 @@ Spring, Summer, Autumn, Winter — day timelines for long-distance couples.
    - Under **Redirect URLs**, add `https://your-site.netlify.app/confirm` (the app’s OAuth callback path).
    Without this, Google sign-in will fail on the deployed site.
 
+## Dev vs prod
+
+Use separate Supabase projects for development and production.
+
+| Environment        | How vars are loaded                           | Where to set                                      |
+|--------------------|------------------------------------------------|---------------------------------------------------|
+| **Local dev**      | `npm run dev` loads `.env`                     | `.env` with dev Supabase URL/key                  |
+| **Netlify prod**   | Build env vars from Netlify UI                 | Site settings → Environment variables             |
+| **Local prod preview** | `npm run preview:prod`                         | `.env.production` with prod Supabase URL/key      |
+
+Netlify does **not** load `.env.production`; set `NUXT_PUBLIC_SUPABASE_URL` and `NUXT_PUBLIC_SUPABASE_KEY` in Netlify’s environment variables for production builds.
+
+**Supabase project settings** (per project):
+
+- **Auth → Providers**: Enable Google OAuth
+- **Auth → URL configuration**: Dev → `http://localhost:3000`, `http://localhost:3000/confirm`; Prod → your Netlify URL and `/confirm`
+
+**Database migrations** (Supabase CLI):
+
+```bash
+# One-time: link and push (prompts for DB password, or set SUPABASE_DB_PASSWORD)
+npm run db:push:dev   # push to dev project
+npm run db:push:prod  # push to prod project
+```
+
+For existing projects that already have the schema applied manually, mark the initial migration as applied before pushing:
+
+```bash
+supabase link --project-ref <PROJECT_ID>
+supabase migration repair 20250101000000_initial_schema --status applied
+```
+
 ## Project structure
 
 - `app/` — pages, layouts, components, composables, middleware
-- `supabase/schema.sql` — tables and RLS for profiles, time_blocks, block_notes, comments
+- `supabase/schema.sql` — reference schema (apply via migrations or SQL editor)
+- `supabase/migrations/` — schema migrations for `supabase db push`
