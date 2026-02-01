@@ -4,7 +4,7 @@
     <section class="space-y-4">
       <h2 class="text-sm font-medium text-slate-500">Profile</h2>
       <div class="flex items-center gap-4">
-        <div class="h-16 w-16 overflow-hidden rounded-full bg-slate-100">
+        <div class="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-slate-100">
           <img
             v-if="profile?.avatar_url"
             :src="profile.avatar_url"
