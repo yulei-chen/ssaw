@@ -1,6 +1,6 @@
 # SSAW
 
-Spring, Summer, Autumn, Winter — day timelines for long-distance couples.
+Spring, Summer, Autumn, Winter — Stay with you through every season.
 
 - **Login** with Google
 - **Homepage**: today-style day view with your timeline (and your partner’s when matched)
