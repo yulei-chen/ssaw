@@ -107,7 +107,7 @@
             <div class="truncate px-2 py-1 text-xs font-medium text-slate-800">
               {{ formatTime(block.start_time) }} – {{ formatTime(block.end_time) }}
             </div>
-            <div class="truncate px-2 text-xs text-slate-600">
+            <div class="px-2 text-xs text-slate-600">
               {{ blockNote(block)?.content || 'No note' }}
             </div>
             <div v-if="blockNoteImageUrls(block).length" class="flex flex-wrap gap-0.5 overflow-hidden px-2 pb-1">
