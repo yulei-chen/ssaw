@@ -1,7 +1,17 @@
 <template>
   <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="open = false">
-    <div ref="modalRef" class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl text-slate-900">
-      <h2 class="mb-4 text-lg font-semibold">Partner's notes</h2>
+    <div ref="modalRef" class="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl text-slate-900">
+      <button
+        type="button"
+        class="absolute right-4 top-4 flex h-10 w-10 min-w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+        aria-label="Close"
+        @click="open = false"
+      >
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+      <h2 class="mb-4 pr-12 text-lg font-semibold">Partner's notes</h2>
       <div v-if="block" class="space-y-4">
         <div class="mb-2 text-sm text-slate-500">
           {{ formatTime(block.start_time) }} – {{ formatTime(block.end_time) }}
@@ -23,13 +33,6 @@
           <CommentList :block-note-id="note.id" @added="$emit('commentAdded')" />
         </div>
       </div>
-      <button
-        type="button"
-        class="mt-4 rounded-lg border border-slate-300 px-4 py-2 text-slate-700 hover:bg-slate-50"
-        @click="open = false"
-      >
-        Close
-      </button>
     </div>
   </div>
 </template>

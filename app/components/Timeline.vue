@@ -15,38 +15,84 @@
     <div class="flex">
       <!-- Hour labels -->
       <div class="flex w-6 flex-shrink-0 flex-col border-r border-slate-200 bg-slate-50/50">
-        <div
-          v-for="h in 24"
-          :key="h"
-          class="flex-1 border-t border-slate-100 px-1 py-0.5 text-right text-xs text-slate-500"
-          :style="{ height: `${PIXELS_PER_HOUR}px` }"
-        >
-          {{ String(h - 1).padStart(2, '0') }}
-        </div>
+        <template v-if="earlyHoursCollapsed">
+          <button
+            type="button"
+            class="mx-0.5 flex shrink-0 items-center justify-center gap-1 rounded-md border border-slate-300 bg-slate-100 px-1.5 py-1 text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-200 hover:border-slate-400"
+            :style="{ height: `${EARLY_HOURS_COLLAPSED_HEIGHT}px` }"
+            aria-label="Expand hours 0–7"
+            @click="earlyHoursCollapsed = false"
+          >
+            <svg class="h-3 w-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <div
+            v-for="h in 16"
+            :key="h + 7"
+            class="flex-1 border-t border-slate-100 px-1 py-0.5 text-right text-xs text-slate-500"
+            :style="{ height: `${PIXELS_PER_HOUR}px` }"
+          >
+            {{ String(h + 7).padStart(2, '0') }}
+          </div>
+        </template>
+        <template v-else>
+          <div
+            v-for="h in 24"
+            :key="h"
+            class="flex flex-col flex-1 items-center justify-between gap-0.5 border-t border-slate-100 px-1 py-0.5 text-right text-xs text-slate-500"
+            :style="{ height: `${PIXELS_PER_HOUR}px` }"
+          >
+            {{ String(h - 1).padStart(2, '0') }}
+            <button
+              v-if="h === 1"
+              type="button"
+              class="ml-0.5 flex h-12 w-5 shrink-0 items-center justify-center rounded-md border border-slate-300 bg-slate-100 text-slate-600 shadow-sm hover:bg-slate-200 hover:border-slate-400"
+              aria-label="Collapse 0–7"
+              @click="earlyHoursCollapsed = true"
+            >
+              <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+              </svg>
+            </button>
+          </div>
+        </template>
       </div>
       <!-- Timeline track -->
       <div
         ref="trackRef"
-        class="relative flex-1 select-none touch-none bg-white"
-        :class="{ 'cursor-crosshair': mode === 'own' }"
-        :style="{ height: `${24 * PIXELS_PER_HOUR}px` }"
+        class="relative flex-1 select-none bg-white"
+        :class="{ 'cursor-crosshair touch-none': mode === 'own' }"
+        :style="{ height: `${trackHeight}px` }"
         @mousedown="onMouseDown"
         @mousemove="onMouseMove"
         @mouseup="onMouseUp"
         @mouseleave="onMouseUp"
-        @touchstart="onTouchStart"
-        @touchmove.prevent="onTouchMove"
-        @touchend="onTouchEnd"
-        @touchcancel="onTouchEnd"
+        v-on="mode === 'own' ? { touchstart: onTouchStart, touchmove: onTouchMoveWithPrevent, touchend: onTouchEnd, touchcancel: onTouchEnd } : {}"
       >
         <!-- Time grid (every hour) -->
         <div class="absolute inset-0 flex flex-col">
-          <div
-            v-for="h in 24"
-            :key="h"
-            class="flex-1 border-t border-slate-100"
-            :data-hour="h - 1"
-          />
+          <template v-if="earlyHoursCollapsed">
+            <div
+              class="flex-shrink-0 border-t border-slate-100"
+              :style="{ height: `${EARLY_HOURS_COLLAPSED_HEIGHT}px` }"
+              data-hour="0-7"
+            />
+            <div
+              v-for="h in 16"
+              :key="h + 7"
+              class="flex-1 border-t border-slate-100"
+              :data-hour="h + 7"
+            />
+          </template>
+          <template v-else>
+            <div
+              v-for="h in 24"
+              :key="h"
+              class="flex-1 border-t border-slate-100"
+              :data-hour="h - 1"
+            />
+          </template>
         </div>
         <!-- Blocks -->
         <div
@@ -57,6 +103,11 @@
           :class="[blockColorClass(index), 'cursor-pointer transition-shadow hover:ring-2 hover:ring-slate-200 hover:ring-offset-2 hover:ring-offset-white hover:shadow-md']"
           @click="onBlockClick(block)"
         >
+          <div v-if="latestComment(block)" class="absolute -bottom-0.5 right-1 z-10 max-w-[70%] origin-top-right">
+            <span class="block max-w-full rotate-3 truncate rounded-sm border border-pink-300/90 bg-pink-50/95 px-1.5 py-0.5 text-[10px] font-medium italic text-pink-800/90 shadow-[1px_1px_2px_rgba(0,0,0,0.08)]">
+              {{ latestComment(block)?.body }}
+            </span>
+          </div>
           <div class="truncate px-2 py-1 text-xs font-medium text-slate-800">
             {{ formatTime(block.start_time) }} – {{ formatTime(block.end_time) }}
           </div>
@@ -120,18 +171,46 @@ const dragPreview = computed(() => {
 })
 
 const TOTAL_MINUTES = 24 * 60
-const PIXELS_PER_HOUR = 60
+const PIXELS_PER_HOUR = 72
+const EARLY_HOURS_COLLAPSED_HEIGHT = 40
+
+const earlyHoursCollapsed = ref(true)
+
+const trackHeight = computed(() =>
+  earlyHoursCollapsed.value
+    ? EARLY_HOURS_COLLAPSED_HEIGHT + 16 * PIXELS_PER_HOUR
+    : 24 * PIXELS_PER_HOUR,
+)
 
 function pixelToTime(pixel: number): string {
-  const minutes = Math.max(0, Math.min(TOTAL_MINUTES, Math.round((pixel / (24 * PIXELS_PER_HOUR)) * TOTAL_MINUTES)))
+  const totalHeight = trackHeight.value
+  let minutes: number
+  if (earlyHoursCollapsed.value) {
+    if (pixel < EARLY_HOURS_COLLAPSED_HEIGHT) {
+      minutes = (pixel / EARLY_HOURS_COLLAPSED_HEIGHT) * 8 * 60
+    } else {
+      minutes = 8 * 60 + ((pixel - EARLY_HOURS_COLLAPSED_HEIGHT) / (16 * PIXELS_PER_HOUR)) * 16 * 60
+    }
+  } else {
+    minutes = (pixel / totalHeight) * TOTAL_MINUTES
+  }
+  minutes = Math.max(0, Math.min(TOTAL_MINUTES, Math.round(minutes)))
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
 function timeToPixel(time: string): number {
-  const [h, m] = time.split(':').map(Number)
+  const parts = time.split(':').map(Number)
+  const h = parts[0] ?? 0
+  const m = parts[1] ?? 0
   const minutes = h * 60 + m
+  if (earlyHoursCollapsed.value) {
+    if (minutes < 8 * 60) {
+      return (minutes / (8 * 60)) * EARLY_HOURS_COLLAPSED_HEIGHT
+    }
+    return EARLY_HOURS_COLLAPSED_HEIGHT + ((minutes - 8 * 60) / (16 * 60)) * (16 * PIXELS_PER_HOUR)
+  }
   return (minutes / TOTAL_MINUTES) * 24 * PIXELS_PER_HOUR
 }
 
@@ -155,7 +234,7 @@ const blockColors = [
 ]
 
 function blockColorClass(index: number): string {
-  return blockColors[index % blockColors.length]
+  return blockColors[index % blockColors.length] ?? 'bg-sky-100'
 }
 
 const dragPreviewStyle = computed(() => {
@@ -172,11 +251,19 @@ function formatTime(t: string) {
   return `${h}:${String(m).padStart(2, '0')}`
 }
 
-function blockNote(block: TimeBlockWithNote): { content?: string; block_note_attachments?: { file_path: string }[] } | null {
+function blockNote(block: TimeBlockWithNote): { content?: string; block_note_attachments?: { file_path: string }[]; comments?: { body: string; created_at: string }[] } | null {
   const notes = block.block_notes
   if (!notes) return null
   // Supabase returns single object for 1:1 relation, array for 1:many
   return Array.isArray(notes) ? notes[0] ?? null : notes
+}
+
+function latestComment(block: TimeBlockWithNote): { body: string; created_at: string } | null {
+  const note = blockNote(block)
+  const comments = note?.comments
+  if (!comments || !Array.isArray(comments) || comments.length === 0) return null
+  const sorted = [...comments].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  return sorted[0] ?? null
 }
 
 function blockNoteImageUrls(block: TimeBlockWithNote): string[] {
@@ -240,6 +327,11 @@ function onTouchMove(e: TouchEvent) {
   const touch = e.touches[0]
   if (!touch) return
   updateDragY(touch.clientY)
+}
+
+function onTouchMoveWithPrevent(e: TouchEvent) {
+  e.preventDefault()
+  onTouchMove(e)
 }
 
 function onTouchEnd() {

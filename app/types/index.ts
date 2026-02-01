@@ -15,11 +15,17 @@ export interface TimeBlock {
   created_at: string
 }
 
+/** Comment snippet for latest comment on block note */
+export interface BlockNoteCommentSnippet {
+  body: string
+  created_at: string
+}
+
 /** Supabase returns block_notes as object for 1:1 relation, or array for 1:many */
 export interface TimeBlockWithNote extends TimeBlock {
   block_notes?:
-    | (BlockNote & { block_note_attachments?: { file_path: string }[] })[]
-    | (BlockNote & { block_note_attachments?: { file_path: string }[] })
+    | (BlockNote & { block_note_attachments?: { file_path: string }[]; comments?: BlockNoteCommentSnippet[] })[]
+    | (BlockNote & { block_note_attachments?: { file_path: string }[]; comments?: BlockNoteCommentSnippet[] })
 }
 
 export interface BlockNote {

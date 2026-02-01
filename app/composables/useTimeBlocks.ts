@@ -11,7 +11,7 @@ export function useTimeBlocks(userId: Ref<string> | string, date: Ref<string> | 
       if (!uid.value || !dayRef.value) return []
       const { data, error } = await supabase
         .from('time_blocks')
-        .select('*, block_notes(*, block_note_attachments(*))')
+        .select('*, block_notes(*, block_note_attachments(*), comments(body, created_at))')
         .eq('user_id', uid.value)
         .eq('day', dayRef.value)
         .order('start_time')
