@@ -125,8 +125,8 @@
               :class="[
                 'block max-w-full rotate-3 truncate rounded-sm border px-1.5 py-0.5 text-[10px] font-medium italic shadow-[1px_1px_2px_rgba(0,0,0,0.08)]',
                 isLatestCommentByMe(block)
-                  ? 'border-sky-300/90 bg-sky-50/95 text-sky-800/90'
-                  : 'border-pink-300/90 bg-pink-50/95 text-pink-800/90',
+                  ? 'border-orange-300/90 bg-orange-50/95 text-orange-800/90'
+                  : 'border-purple-300/90 bg-purple-50/95 text-purple-800/90',
               ]"
             >
               {{ latestComment(block)?.body }}
