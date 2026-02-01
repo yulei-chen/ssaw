@@ -45,6 +45,15 @@
             :data-hour="h - 1"
           />
         </div>
+        <!-- Current time line (only when viewing today in display timezone) -->
+        <div
+          v-if="currentTimeLine"
+          class="pointer-events-none absolute left-0 right-0 z-[100] flex items-center"
+          :style="{ top: `${currentTimeLine.top}px` }"
+        >
+          <div class="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-red-500 shadow-sm ring-2 ring-white" />
+          <div class="h-0.5 flex-1 bg-red-500" />
+        </div>
         <!-- Blocks -->
         <div
           v-for="(block, index) in blocks"
@@ -100,6 +109,7 @@
 
 <script setup lang="ts">
 import type { TimeBlockWithNote } from '~/types'
+import { toZonedTime } from 'date-fns-tz'
 import { getDayUtcRange, getTimeInTimezone, formatHHmm } from '~/composables/useTimezone'
 
 const supabase = useSupabaseClient()
@@ -135,6 +145,21 @@ const dragPreview = computed(() => {
 const TOTAL_MINUTES = 24 * 60
 const PIXELS_PER_HOUR = 72
 const trackHeight = 24 * PIXELS_PER_HOUR
+
+const now = ref(Date.now())
+useIntervalFn(() => { now.value = Date.now() }, 60 * 1000)
+
+const currentTimeLine = computed(() => {
+  const date = new Date(now.value)
+  const zoned = toZonedTime(date, props.displayTimezone)
+  const todayInTz = `${zoned.getFullYear()}-${String(zoned.getMonth() + 1).padStart(2, '0')}-${String(zoned.getDate()).padStart(2, '0')}`
+  const utcToday = date.toISOString().slice(0, 10)
+  const isViewingToday = props.date === todayInTz || props.date === utcToday
+  if (!isViewingToday) return null
+  const hhmm = formatHHmm(zoned.getHours(), zoned.getMinutes())
+  const top = timeToPixel(hhmm)
+  return { top }
+})
 
 function pixelToTime(pixel: number): string {
   const minutes = (pixel / trackHeight) * TOTAL_MINUTES

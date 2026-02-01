@@ -21,6 +21,9 @@
 </template>
 
 <script setup lang="ts">
+import { toZonedTime } from 'date-fns-tz'
+import { getBrowserTimezone } from '~/composables/useTimezone'
+
 const props = defineProps<{ date: string }>()
 const emit = defineEmits<{ 'update:date': [value: string] }>()
 
@@ -30,7 +33,9 @@ const date = computed({
 })
 
 const isToday = computed(() => {
-  const today = new Date().toISOString().slice(0, 10)
+  const tz = getBrowserTimezone()
+  const z = toZonedTime(new Date(), tz)
+  const today = `${z.getFullYear()}-${String(z.getMonth() + 1).padStart(2, '0')}-${String(z.getDate()).padStart(2, '0')}`
   return props.date === today
 })
 

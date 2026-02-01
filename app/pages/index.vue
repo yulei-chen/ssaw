@@ -46,12 +46,18 @@
 </template>
 
 <script setup lang="ts">
+import { toZonedTime } from 'date-fns-tz'
 import { useStorage } from '@vueuse/core'
 import { getBrowserTimezone } from '~/composables/useTimezone'
 
 definePageMeta({ middleware: 'auth' })
 
-const selectedDate = useStorage('ssaw-selected-date', () => new Date().toISOString().slice(0, 10))
+function todayInTimezone(tz: string): string {
+  const z = toZonedTime(new Date(), tz)
+  return `${z.getFullYear()}-${String(z.getMonth() + 1).padStart(2, '0')}-${String(z.getDate()).padStart(2, '0')}`
+}
+
+const selectedDate = useStorage('ssaw-selected-date', () => todayInTimezone(getBrowserTimezone()))
 const timeTravel = useStorage('ssaw-time-travel', false)
 const showPartnerModal = ref(false)
 const { data: profile, refresh: refreshProfile } = useProfile()
