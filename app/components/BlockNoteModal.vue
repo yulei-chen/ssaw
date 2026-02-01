@@ -1,9 +1,28 @@
 <template>
   <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="open = false">
-    <div ref="modalRef" class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl text-slate-900">
-      <h2 class="mb-4 text-lg font-semibold">{{ isEdit ? 'Edit time block' : 'New time block' }}</h2>
-      <div v-if="timeBlock" class="mb-4 text-sm text-slate-500">
-        {{ timeBlock.startTime }} – {{ timeBlock.endTime }} on {{ date }}
+    <div ref="modalRef" class="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl text-slate-900">
+      <button
+        type="button"
+        class="absolute right-4 top-4 flex h-10 w-10 min-w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+        aria-label="Close"
+        @click="open = false"
+      >
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+      <h2 class="mb-4 pr-12 text-lg font-semibold">{{ isEdit ? 'Edit time block' : 'New time block' }}</h2>
+      <div v-if="timeBlock" class="mb-4 flex items-center text-sm text-slate-500 gap-2">
+        <span>{{ timeBlock.startTime }} – {{ timeBlock.endTime }} on {{ date }}</span>
+        <button
+          v-if="isEdit"
+          type="button"
+          class="text-red-600 hover:text-red-700 hover:underline disabled:opacity-50"
+          :disabled="deleting"
+          @click="deleteBlock"
+        >
+          {{ deleting ? 'Deleting…' : 'Delete' }}
+        </button>
       </div>
       <form class="space-y-4" @submit.prevent="save">
         <div>
@@ -80,16 +99,6 @@
             :disabled="saving"
           >
             {{ saving ? 'Saving…' : 'Save' }}
-          </button>
-        </div>
-        <div v-if="isEdit" class="mt-4 border-t border-slate-200 pt-4">
-          <button
-            type="button"
-            class="text-sm text-red-600 hover:text-red-700 hover:underline"
-            :disabled="deleting"
-            @click="deleteBlock"
-          >
-            {{ deleting ? 'Deleting…' : 'Delete this block' }}
           </button>
         </div>
       </form>

@@ -27,13 +27,17 @@
       <!-- Timeline track -->
       <div
         ref="trackRef"
-        class="relative flex-1 select-none bg-white"
+        class="relative flex-1 select-none touch-none bg-white"
         :class="{ 'cursor-crosshair': mode === 'own' }"
         :style="{ height: `${24 * PIXELS_PER_HOUR}px` }"
         @mousedown="onMouseDown"
         @mousemove="onMouseMove"
         @mouseup="onMouseUp"
         @mouseleave="onMouseUp"
+        @touchstart="onTouchStart"
+        @touchmove.prevent="onTouchMove"
+        @touchend="onTouchEnd"
+        @touchcancel="onTouchEnd"
       >
         <!-- Time grid (every hour) -->
         <div class="absolute inset-0 flex flex-col">
@@ -182,31 +186,64 @@ function blockNoteImageUrls(block: TimeBlockWithNote): string[] {
   return attachments.map((a) => supabase.storage.from('block-images').getPublicUrl(a.file_path).data.publicUrl)
 }
 
-function onMouseDown(e: MouseEvent) {
-  if (props.mode !== 'own' || !trackRef.value) return
+function getYFromClient(clientY: number): number {
+  if (!trackRef.value) return 0
   const rect = trackRef.value.getBoundingClientRect()
-  dragging.value = true
-  dragStartY.value = e.clientY - rect.top
-  dragEndY.value = e.clientY - rect.top
+  return clientY - rect.top
 }
 
-const onMouseMoveThrottled = useThrottleFn((e: MouseEvent) => {
+function startDrag(clientY: number) {
+  if (props.mode !== 'own' || !trackRef.value) return
+  const y = getYFromClient(clientY)
+  dragging.value = true
+  dragStartY.value = y
+  dragEndY.value = y
+}
+
+const updateDragYThrottled = useThrottleFn((clientY: number) => {
   if (!dragging.value || !trackRef.value) return
-  const rect = trackRef.value.getBoundingClientRect()
-  dragEndY.value = e.clientY - rect.top
+  dragEndY.value = getYFromClient(clientY)
 }, 16)
 
-function onMouseMove(e: MouseEvent) {
-  onMouseMoveThrottled(e)
+function updateDragY(clientY: number) {
+  updateDragYThrottled(clientY)
 }
 
-function onMouseUp() {
+function finishDrag() {
   if (!dragging.value) return
   const p = dragPreview.value
   if (p) {
     emit('createBlock', { startTime: p.start, endTime: p.end })
   }
   dragging.value = false
+}
+
+function onMouseDown(e: MouseEvent) {
+  startDrag(e.clientY)
+}
+
+function onMouseMove(e: MouseEvent) {
+  updateDragY(e.clientY)
+}
+
+function onMouseUp() {
+  finishDrag()
+}
+
+function onTouchStart(e: TouchEvent) {
+  const touch = e.touches[0]
+  if (!touch) return
+  startDrag(touch.clientY)
+}
+
+function onTouchMove(e: TouchEvent) {
+  const touch = e.touches[0]
+  if (!touch) return
+  updateDragY(touch.clientY)
+}
+
+function onTouchEnd() {
+  finishDrag()
 }
 
 function onBlockClick(block: TimeBlockWithNote) {
