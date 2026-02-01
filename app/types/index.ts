@@ -19,6 +19,7 @@ export interface TimeBlock {
 export interface BlockNoteCommentSnippet {
   body: string
   created_at: string
+  user_id?: string
 }
 
 /** Supabase returns block_notes as object for 1:1 relation, or array for 1:many */

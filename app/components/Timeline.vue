@@ -121,7 +121,14 @@
             </div>
           </div>
           <div v-if="latestComment(block)" class="absolute -bottom-0.5 right-1 z-10 max-w-[70%] origin-top-right">
-            <span class="block max-w-full rotate-3 truncate rounded-sm border border-pink-300/90 bg-pink-50/95 px-1.5 py-0.5 text-[10px] font-medium italic text-pink-800/90 shadow-[1px_1px_2px_rgba(0,0,0,0.08)]">
+            <span
+              :class="[
+                'block max-w-full rotate-3 truncate rounded-sm border px-1.5 py-0.5 text-[10px] font-medium italic shadow-[1px_1px_2px_rgba(0,0,0,0.08)]',
+                isLatestCommentByMe(block)
+                  ? 'border-sky-300/90 bg-sky-50/95 text-sky-800/90'
+                  : 'border-pink-300/90 bg-pink-50/95 text-pink-800/90',
+              ]"
+            >
               {{ latestComment(block)?.body }}
             </span>
           </div>
@@ -253,19 +260,26 @@ function formatTime(t: string) {
   return `${h}:${String(m).padStart(2, '0')}`
 }
 
-function blockNote(block: TimeBlockWithNote): { content?: string; block_note_attachments?: { file_path: string }[]; comments?: { body: string; created_at: string }[] } | null {
+function blockNote(block: TimeBlockWithNote): { content?: string; block_note_attachments?: { file_path: string }[]; comments?: { body: string; created_at: string; user_id?: string }[] } | null {
   const notes = block.block_notes
   if (!notes) return null
   // Supabase returns single object for 1:1 relation, array for 1:many
   return Array.isArray(notes) ? notes[0] ?? null : notes
 }
 
-function latestComment(block: TimeBlockWithNote): { body: string; created_at: string } | null {
+function latestComment(block: TimeBlockWithNote): { body: string; created_at: string; user_id?: string } | null {
   const note = blockNote(block)
   const comments = note?.comments
   if (!comments || !Array.isArray(comments) || comments.length === 0) return null
   const sorted = [...comments].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   return sorted[0] ?? null
+}
+
+const myUserId = useUserId()
+function isLatestCommentByMe(block: TimeBlockWithNote): boolean {
+  const comment = latestComment(block)
+  const uid = myUserId.value
+  return !!(comment && uid && comment.user_id === uid)
 }
 
 function blockNoteImageUrls(block: TimeBlockWithNote): string[] {

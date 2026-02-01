@@ -56,6 +56,16 @@
         Unmatch
       </button>
     </section>
+    <section class="space-y-4">
+      <h2 class="text-sm font-medium text-slate-500">Account</h2>
+      <button
+        type="button"
+        class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+        @click="supabase.auth.signOut()"
+      >
+        Sign out
+      </button>
+    </section>
   </div>
 </template>
 

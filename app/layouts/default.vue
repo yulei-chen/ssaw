@@ -5,15 +5,7 @@
         <NuxtLink to="/" class="font-semibold text-slate-900">SSAW</NuxtLink>
         <nav class="flex items-center gap-4">
           <template v-if="user">
-            <NuxtLink to="/" class="text-sm text-slate-700 hover:underline">Home</NuxtLink>
             <NuxtLink to="/settings" class="text-sm text-slate-700 hover:underline">Settings</NuxtLink>
-            <button
-              type="button"
-              class="text-sm text-slate-500 hover:text-slate-700"
-              @click="supabase.auth.signOut()"
-            >
-              Sign out
-            </button>
           </template>
         </nav>
       </div>
@@ -26,7 +18,6 @@
 
 <script setup lang="ts">
 const user = useSupabaseUser()
-const supabase = useSupabaseClient()
 
 // Force light theme
 useHead({
