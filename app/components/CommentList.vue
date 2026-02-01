@@ -6,6 +6,7 @@
         :key="c.id"
         class="rounded bg-slate-100 px-3 py-2 text-sm text-slate-800"
       >
+        <span class="block text-xs font-medium text-slate-600 mb-0.5">{{ commenterName(c) }}</span>
         <span class="font-medium">{{ c.body }}</span>
         <span class="ml-2 text-slate-500 text-xs">{{ formatDate(c.created_at) }}</span>
       </li>
@@ -30,6 +31,11 @@
 <script setup lang="ts">
 import type { Comment } from '~/types'
 
+/** Comment with joined profile for display name */
+type CommentWithProfile = Comment & {
+  profiles?: { display_name: string | null; email: string } | null
+}
+
 const props = defineProps<{ blockNoteId: string }>()
 const emit = defineEmits<{ added: [] }>()
 
@@ -42,14 +48,14 @@ const { data: commentsData, refresh } = useAsyncData(
   async () => {
     const { data, error } = await supabase
       .from('comments')
-      .select('*')
+      .select('*, profiles(display_name, email)')
       .eq('block_note_id', blockNoteIdRef.value)
       .order('created_at', { ascending: true })
     if (error) {
       console.error('[CommentList]', error)
       return []
     }
-    return (data ?? []) as Comment[]
+    return (data ?? []) as CommentWithProfile[]
   },
   { watch: [blockNoteIdRef] },
 )
@@ -67,6 +73,13 @@ async function addComment() {
   body.value = ''
   await refresh()
   emit('added')
+}
+
+function commenterName(c: CommentWithProfile): string {
+  const p = c.profiles
+  if (p?.display_name?.trim()) return p.display_name.trim()
+  if (p?.email) return p.email
+  return 'Someone'
 }
 
 function formatDate(iso: string) {
