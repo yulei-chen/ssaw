@@ -37,17 +37,54 @@
         </svg>
       </button>
       <h2 class="mb-4 pr-12 text-lg font-semibold">{{ isEdit ? 'Edit time block' : 'New time block' }}</h2>
-      <div v-if="timeBlock" class="mb-4 flex items-center text-sm text-slate-500 gap-2">
-        <span>{{ timeBlock.startTime }} – {{ timeBlock.endTime }} on {{ date }}</span>
-        <button
-          v-if="isEdit"
-          type="button"
-          class="text-red-600 hover:text-red-700 hover:underline disabled:opacity-50"
-          :disabled="deleting"
-          @click="deleteBlock"
-        >
-          {{ deleting ? 'Deleting…' : 'Delete' }}
-        </button>
+      <div v-if="timeBlock" class="mb-4 space-y-3">
+        <div class="flex items-center gap-2 text-sm">
+          <span class="font-medium text-slate-700">Time range</span>
+          <span class="text-slate-500">on {{ date }}</span>
+        </div>
+        <div class="grid grid-cols-2 gap-4 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
+          <div class="space-y-1.5">
+            <label class="text-xs font-medium text-slate-500">Start</label>
+            <div class="flex gap-1.5">
+              <select
+                :value="startHour"
+                class="flex-1 rounded-md border border-slate-300 bg-white px-2 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                @change="onStartHourChange(($event.target as HTMLSelectElement).value)"
+              >
+                <option v-for="h in hourOptions" :key="h" :value="h">{{ h }}</option>
+              </select>
+              <span class="flex items-center text-slate-400">:</span>
+              <select
+                :value="startMinute"
+                class="flex-1 rounded-md border border-slate-300 bg-white px-2 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                @change="onStartMinuteChange(($event.target as HTMLSelectElement).value)"
+              >
+                <option v-for="m in minuteOptions" :key="m" :value="m">{{ m }}</option>
+              </select>
+            </div>
+          </div>
+          <div class="space-y-1.5">
+            <label class="text-xs font-medium text-slate-500">End</label>
+            <div class="flex gap-1.5">
+              <select
+                :value="endHour"
+                class="flex-1 rounded-md border border-slate-300 bg-white px-2 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                @change="onEndHourChange(($event.target as HTMLSelectElement).value)"
+              >
+                <option v-for="h in hourOptions" :key="h" :value="h">{{ h }}</option>
+              </select>
+              <span class="flex items-center text-slate-400">:</span>
+              <select
+                :value="endMinute"
+                class="flex-1 rounded-md border border-slate-300 bg-white px-2 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                @change="onEndMinuteChange(($event.target as HTMLSelectElement).value)"
+              >
+                <option v-for="m in minuteOptions" :key="m" :value="m">{{ m }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <p v-if="timeRangeError" class="text-sm text-red-600">{{ timeRangeError }}</p>
       </div>
       <form class="space-y-4" @submit.prevent="save">
         <div>
@@ -112,18 +149,20 @@
             </label>
           </div>
         </div>
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
           <button
+            v-if="isEdit"
             type="button"
-            class="flex-1 rounded-lg border border-slate-300 px-4 py-2 text-slate-700 hover:bg-slate-50"
-            @click="open = false"
+            class="flex-1 rounded-lg border border-red-300 px-4 py-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
+            :disabled="deleting"
+            @click="deleteBlock"
           >
-            Cancel
+            {{ deleting ? 'Deleting…' : 'Delete' }}
           </button>
           <button
             type="submit"
-            class="flex-1 rounded-lg bg-slate-800 px-4 py-2 text-white hover:bg-slate-700"
-            :disabled="saving"
+            class="flex-1 rounded-lg bg-slate-800 px-4 py-2 text-white hover:bg-slate-700 disabled:opacity-50 min-w-0"
+            :disabled="saving || !!timeRangeError"
           >
             {{ saving ? 'Saving…' : 'Save' }}
           </button>
@@ -163,6 +202,58 @@ onClickOutside(modalRef, () => {
 })
 
 const isEdit = computed(() => !!props.timeBlock?.blockId)
+
+const editStartTime = ref('')
+const editEndTime = ref('')
+
+const hourOptions = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
+const minuteOptions = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'))
+
+function parseTime(t: string): { hour: string; minute: string } {
+  const [h, m] = t.split(':')
+  return { hour: (h ?? '00').padStart(2, '0'), minute: (m ?? '00').padStart(2, '0') }
+}
+
+const startHour = computed(() => parseTime(editStartTime.value).hour)
+const startMinute = computed(() => parseTime(editStartTime.value).minute)
+const endHour = computed(() => parseTime(editEndTime.value).hour)
+const endMinute = computed(() => parseTime(editEndTime.value).minute)
+
+function onStartHourChange(hour: string) {
+  editStartTime.value = `${hour}:${startMinute.value}`
+}
+function onStartMinuteChange(minute: string) {
+  editStartTime.value = `${startHour.value}:${minute}`
+}
+function onEndHourChange(hour: string) {
+  editEndTime.value = `${hour}:${endMinute.value}`
+}
+function onEndMinuteChange(minute: string) {
+  editEndTime.value = `${endHour.value}:${minute}`
+}
+
+watch(
+  () => props.timeBlock,
+  (block) => {
+    if (block) {
+      editStartTime.value = block.startTime
+      editEndTime.value = block.endTime
+    }
+  },
+  { immediate: true },
+)
+
+const timeRangeError = computed(() => {
+  const s = editStartTime.value
+  const e = editEndTime.value
+  if (!s || !e) return null
+  const [sh, sm] = s.split(':').map(Number)
+  const [eh, em] = e.split(':').map(Number)
+  const startM = (sh ?? 0) * 60 + (sm ?? 0)
+  const endM = (eh ?? 0) * 60 + (em ?? 0)
+  if (startM >= endM) return 'End time must be after start time.'
+  return null
+})
 const content = ref('')
 const noteId = ref<string | null>(null)
 const attachments = ref<AttachmentWithUrl[]>([])
@@ -196,11 +287,12 @@ watch(() => props.timeBlock, async (block) => {
   attachments.value = []
   revokePendingPreviews()
   pendingFiles.value = []
-  if (block?.blockId) {
+  const blockId = block?.blockId
+  if (blockId) {
     const { data } = await supabase
       .from('block_notes')
       .select('id, content, block_note_attachments(file_path)')
-      .eq('time_block_id', block.blockId)
+      .eq('time_block_id', blockId)
       .single()
     if (data) {
       const row = data as { id: string; content: string; block_note_attachments: { file_path: string }[] }
@@ -273,10 +365,12 @@ function uniqueStoragePath(noteId: string, file: File, index = 0): string {
 
 async function save() {
   const uid = userId.value
-  if (!props.timeBlock || !uid) return
+  if (!props.timeBlock || !uid || timeRangeError.value) return
+  const startTime = editStartTime.value
+  const endTime = editEndTime.value
   saving.value = true
   try {
-    const { startTime, endTime, blockId } = props.timeBlock
+    const { blockId } = props.timeBlock
     let timeBlockId = blockId
     if (!timeBlockId) {
       const { data: newBlock, error: blockError } = await supabase
@@ -291,6 +385,15 @@ async function save() {
         .single()
       if (blockError || !newBlock) return
       timeBlockId = (newBlock as { id: string }).id
+    } else {
+      const { error: updateError } = await supabase
+        .from('time_blocks')
+        .update({ start_time: startTime, end_time: endTime })
+        .eq('id', timeBlockId)
+      if (updateError) {
+        console.error('[BlockNoteModal] update time block', updateError)
+        return
+      }
     }
     let currentNoteId = noteId.value
     const { data: existingNote } = await supabase.from('block_notes').select('id').eq('time_block_id', timeBlockId).single()
