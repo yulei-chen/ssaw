@@ -98,30 +98,32 @@
         <div
           v-for="(block, index) in blocks"
           :key="block.id"
-          class="absolute left-1 right-1 overflow-hidden rounded border border-slate-300"
+          class="absolute left-1 right-1 rounded border border-slate-300"
           :style="blockStyle(block)"
           :class="[blockColorClass(index), 'cursor-pointer transition-shadow hover:ring-2 hover:ring-slate-200 hover:ring-offset-2 hover:ring-offset-white hover:shadow-md']"
           @click="onBlockClick(block)"
         >
+          <div class="h-full min-h-0 overflow-hidden rounded">
+            <div class="truncate px-2 py-1 text-xs font-medium text-slate-800">
+              {{ formatTime(block.start_time) }} – {{ formatTime(block.end_time) }}
+            </div>
+            <div class="truncate px-2 text-xs text-slate-600">
+              {{ blockNote(block)?.content || 'No note' }}
+            </div>
+            <div v-if="blockNoteImageUrls(block).length" class="flex flex-wrap gap-0.5 overflow-hidden px-2 pb-1">
+              <img
+                v-for="url in blockNoteImageUrls(block)"
+                :key="url"
+                :src="url"
+                alt=""
+                class="h-12 w-12 shrink-0 rounded object-cover"
+              />
+            </div>
+          </div>
           <div v-if="latestComment(block)" class="absolute -bottom-0.5 right-1 z-10 max-w-[70%] origin-top-right">
             <span class="block max-w-full rotate-3 truncate rounded-sm border border-pink-300/90 bg-pink-50/95 px-1.5 py-0.5 text-[10px] font-medium italic text-pink-800/90 shadow-[1px_1px_2px_rgba(0,0,0,0.08)]">
               {{ latestComment(block)?.body }}
             </span>
-          </div>
-          <div class="truncate px-2 py-1 text-xs font-medium text-slate-800">
-            {{ formatTime(block.start_time) }} – {{ formatTime(block.end_time) }}
-          </div>
-          <div class="truncate px-2 text-xs text-slate-600">
-            {{ blockNote(block)?.content || 'No note' }}
-          </div>
-          <div v-if="blockNoteImageUrls(block).length" class="flex flex-wrap gap-0.5 px-2 pb-1">
-            <img
-              v-for="url in blockNoteImageUrls(block)"
-              :key="url"
-              :src="url"
-              alt=""
-              class="h-12 w-12 shrink-0 rounded object-cover"
-            />
           </div>
         </div>
         <!-- Drag preview -->

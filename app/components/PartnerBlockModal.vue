@@ -1,4 +1,29 @@
 <template>
+  <!-- Lightbox for full-size image -->
+  <Teleport to="body">
+    <div
+      v-if="lightboxImage"
+      class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
+      @click.self="lightboxImage = null"
+    >
+      <button
+        type="button"
+        class="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+        aria-label="Close"
+        @click="lightboxImage = null"
+      >
+        <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+      <img
+        :src="lightboxImage"
+        alt="Full size"
+        class="max-h-full max-w-full rounded-lg object-contain"
+        @click.stop
+      />
+    </div>
+  </Teleport>
   <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="open = false">
     <div ref="modalRef" class="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl text-slate-900">
       <button
@@ -24,7 +49,8 @@
               :key="url"
               :src="url"
               alt="Attachment"
-              class="h-24 w-24 rounded object-cover"
+              class="h-24 w-24 cursor-pointer rounded object-cover hover:opacity-90"
+              @click="lightboxImage = url"
             />
           </div>
         </div>
@@ -50,6 +76,14 @@ const props = defineProps<{
 const emit = defineEmits<{ 'update:open': [value: boolean]; commentAdded: [] }>()
 
 const modalRef = ref<HTMLElement | null>(null)
+const lightboxImage = ref<string | null>(null)
+
+function onEscape(e: KeyboardEvent) {
+  if (e.key === 'Escape') lightboxImage.value = null
+}
+onMounted(() => window.addEventListener('keydown', onEscape))
+onBeforeUnmount(() => window.removeEventListener('keydown', onEscape))
+
 const open = computed({
   get: () => props.open,
   set: (v) => emit('update:open', v),
