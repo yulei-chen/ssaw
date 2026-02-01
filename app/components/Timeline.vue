@@ -1,5 +1,5 @@
 <template>
-  <div class="rounded-lg border border-slate-200 bg-white">
+  <div class="rounded-lg border border-slate-200 bg-white overflow-hidden">
     <div class="flex items-center gap-2 border-b border-slate-200 px-4 py-2">
       <div class="h-8 w-8 flex-shrink-0 overflow-hidden rounded-full bg-slate-100">
         <img
@@ -80,7 +80,7 @@
               />
             </div>
           </div>
-          <div v-if="latestComment(block)" class="absolute -bottom-0.5 right-1 z-10 max-w-[70%] origin-top-right">
+          <div v-if="latestComment(block)" class="absolute -bottom-0.5 right-1 z-2 max-w-[70%] origin-top-right">
             <span
               :class="[
                 'block max-w-full rotate-3 truncate rounded-sm border px-1.5 py-0.5 text-[10px] font-medium italic shadow-[1px_1px_2px_rgba(0,0,0,0.08)]',
