@@ -11,6 +11,7 @@
           :loading="loadingMyBlocks"
           label="You"
           :avatar-url="profile?.avatar_url"
+          :display-timezone="myTimezone"
           @create-block="openBlockNoteModal"
           @block-click="openBlockNoteModal"
         />
@@ -22,6 +23,7 @@
           :loading="loadingPartnerBlocks"
           label="Partner"
           :avatar-url="partner?.avatar_url"
+          :display-timezone="partnerDisplayTimezone"
           @block-click="openPartnerBlockModal"
         />
       </div>
@@ -30,23 +32,27 @@
       v-model:open="blockNoteOpen"
       :time-block="editingBlock"
       :date="selectedDate"
+      :user-timezone="myTimezone"
       @saved="onBlockSaved"
       @deleted="onBlockDeleted"
     />
     <PartnerBlockModal
       v-model:open="partnerBlockOpen"
       :block="viewingPartnerBlock"
+      :display-timezone="partnerDisplayTimezone"
       @comment-added="onCommentAdded"
     />
   </div>
 </template>
 
 <script setup lang="ts">
+import { useStorage } from '@vueuse/core'
+import { getBrowserTimezone } from '~/composables/useTimezone'
+
 definePageMeta({ middleware: 'auth' })
 
-import { useStorage } from '@vueuse/core'
-
 const selectedDate = useStorage('ssaw-selected-date', () => new Date().toISOString().slice(0, 10))
+const timeTravel = useStorage('ssaw-time-travel', false)
 const showPartnerModal = ref(false)
 const { data: profile, refresh: refreshProfile } = useProfile()
 const { data: partner } = usePartner()
@@ -54,13 +60,33 @@ const { data: partner } = usePartner()
 const myUserId = computed(() => profile.value?.id ?? '')
 const partnerUserId = computed(() => partner.value?.id ?? '')
 
+const myTimezone = computed(() => profile.value?.timezone ?? getBrowserTimezone())
+const partnerTimezone = computed(() => partner.value?.timezone ?? getBrowserTimezone())
+const partnerDisplayTimezone = computed(() =>
+  timeTravel.value ? partnerTimezone.value : myTimezone.value,
+)
+
 const blockNoteOpen = ref(false)
-const editingBlock = ref<{ startTime: string; endTime: string; blockId?: string } | null>(null)
+const editingBlock = ref<{
+  startTime?: string
+  endTime?: string
+  start_at?: string
+  end_at?: string
+  blockId?: string
+} | null>(null)
 const partnerBlockOpen = ref(false)
 const viewingPartnerBlock = ref<import('~/types').TimeBlockWithNote | null>(null)
 
-const { data: myBlocks, refresh: refreshMyBlocks, pending: loadingMyBlocks } = useTimeBlocks(myUserId, selectedDate)
-const { data: partnerBlocks, refresh: refreshPartnerBlocks, pending: loadingPartnerBlocks } = useTimeBlocks(partnerUserId, selectedDate)
+const { data: myBlocks, refresh: refreshMyBlocks, pending: loadingMyBlocks } = useTimeBlocks(
+  myUserId,
+  selectedDate,
+  myTimezone,
+)
+const { data: partnerBlocks, refresh: refreshPartnerBlocks, pending: loadingPartnerBlocks } = useTimeBlocks(
+  partnerUserId,
+  selectedDate,
+  partnerDisplayTimezone,
+)
 
 const hasCheckedPartner = ref(false)
 watch(profile, (p) => {
@@ -75,14 +101,18 @@ function onMatched() {
   refreshPartnerBlocks?.()
 }
 
-function openBlockNoteModal(payload?: { startTime: string; endTime: string } | { id: string; start_time: string; end_time: string; block_notes?: { id: string }[] }) {
+function openBlockNoteModal(
+  payload?:
+    | { startTime: string; endTime: string }
+    | { id: string; start_at: string; end_at: string; block_notes?: { id: string }[] },
+) {
   if (payload && 'startTime' in payload) {
     editingBlock.value = { startTime: payload.startTime, endTime: payload.endTime }
-  } else if (payload && 'id' in payload) {
+  } else if (payload && 'id' in payload && 'start_at' in payload && 'end_at' in payload) {
     editingBlock.value = {
-      startTime: payload.start_time,
-      endTime: payload.end_time,
-      blockId: payload.id, // time_block id — use for fetch/update even when no note yet
+      start_at: payload.start_at,
+      end_at: payload.end_at,
+      blockId: payload.id,
     }
   } else {
     editingBlock.value = null

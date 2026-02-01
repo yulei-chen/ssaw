@@ -39,7 +39,7 @@
       <h2 class="mb-4 pr-12 text-lg font-semibold">Partner's notes</h2>
       <div v-if="block" class="space-y-4">
         <div class="mb-2 text-sm text-slate-500">
-          {{ formatTime(block.start_time) }} – {{ formatTime(block.end_time) }}
+          {{ blockTimeLabel(block) }}
         </div>
         <div class="rounded-lg bg-slate-100 p-4">
           <p class="whitespace-pre-wrap text-sm text-slate-700">{{ noteContent || 'No notes.' }}</p>
@@ -65,12 +65,14 @@
 
 <script setup lang="ts">
 import type { TimeBlockWithNote } from '~/types'
+import { getTimeInTimezone, formatHHmm } from '~/composables/useTimezone'
 
 const supabase = useSupabaseClient()
 
 const props = defineProps<{
   open: boolean
   block: TimeBlockWithNote | null
+  displayTimezone: string
 }>()
 
 const emit = defineEmits<{ 'update:open': [value: boolean]; commentAdded: [] }>()
@@ -110,9 +112,9 @@ const noteAttachmentUrls = computed(() => {
     .map((path) => supabase.storage.from('block-images').getPublicUrl(path).data.publicUrl)
 })
 
-function formatTime(t: string) {
-  const [h, m] = t.split(':').map(Number)
-  if (m === 0) return `${h}:00`
-  return `${h}:${String(m).padStart(2, '0')}`
+function blockTimeLabel(block: TimeBlockWithNote): string {
+  const startLocal = getTimeInTimezone(block.start_at, props.displayTimezone)
+  const endLocal = getTimeInTimezone(block.end_at, props.displayTimezone)
+  return `${formatHHmm(startLocal.hours, startLocal.minutes)} – ${formatHHmm(endLocal.hours, endLocal.minutes)}`
 }
 </script>

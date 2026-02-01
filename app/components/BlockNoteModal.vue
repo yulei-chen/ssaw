@@ -177,6 +177,8 @@
 </template>
 
 <script setup lang="ts">
+import { getTimeInTimezone, formatHHmm, toUtc } from '~/composables/useTimezone'
+
 interface AttachmentWithUrl {
   file_path: string
   url: string
@@ -184,8 +186,9 @@ interface AttachmentWithUrl {
 
 const props = defineProps<{
   open: boolean
-  timeBlock: { startTime: string; endTime: string; blockId?: string } | null
+  timeBlock: { startTime?: string; endTime?: string; start_at?: string; end_at?: string; blockId?: string } | null
   date: string
+  userTimezone: string
 }>()
 
 const emit = defineEmits<{ 'update:open': [value: boolean]; saved: []; deleted: [] }>()
@@ -233,11 +236,19 @@ function onEndMinuteChange(minute: string) {
 }
 
 watch(
-  () => props.timeBlock,
-  (block) => {
+  () => [props.timeBlock, props.userTimezone],
+  () => {
+    const block = props.timeBlock
     if (block) {
-      editStartTime.value = block.startTime
-      editEndTime.value = block.endTime
+      if (block.start_at != null && block.end_at != null) {
+        const startLocal = getTimeInTimezone(block.start_at, props.userTimezone)
+        const endLocal = getTimeInTimezone(block.end_at, props.userTimezone)
+        editStartTime.value = formatHHmm(startLocal.hours, startLocal.minutes)
+        editEndTime.value = formatHHmm(endLocal.hours, endLocal.minutes)
+      } else if (block.startTime != null && block.endTime != null) {
+        editStartTime.value = block.startTime
+        editEndTime.value = block.endTime
+      }
     }
   },
   { immediate: true },
@@ -368,6 +379,8 @@ async function save() {
   if (!props.timeBlock || !uid || timeRangeError.value) return
   const startTime = editStartTime.value
   const endTime = editEndTime.value
+  const startAt = toUtc(props.date, startTime, props.userTimezone)
+  const endAt = toUtc(props.date, endTime, props.userTimezone)
   saving.value = true
   try {
     const { blockId } = props.timeBlock
@@ -377,9 +390,8 @@ async function save() {
         .from('time_blocks')
         .insert({
           user_id: uid,
-          day: props.date,
-          start_time: startTime,
-          end_time: endTime,
+          start_at: startAt,
+          end_at: endAt,
         })
         .select('id')
         .single()
@@ -388,7 +400,7 @@ async function save() {
     } else {
       const { error: updateError } = await supabase
         .from('time_blocks')
-        .update({ start_time: startTime, end_time: endTime })
+        .update({ start_at: startAt, end_at: endAt })
         .eq('id', timeBlockId)
       if (updateError) {
         console.error('[BlockNoteModal] update time block', updateError)

@@ -57,6 +57,23 @@
       </button>
     </section>
     <section class="space-y-4">
+      <h2 class="text-sm font-medium text-slate-500">Timezone</h2>
+      <p class="text-sm text-slate-600">Your local timezone for time blocks. Defaults to your browser's timezone.</p>
+      <select
+        v-model="timezone"
+        class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        @change="updateTimezone"
+      >
+        <option
+          v-for="tz in timezoneOptions"
+          :key="tz"
+          :value="tz"
+        >
+          {{ timezoneLabel(tz) }}
+        </option>
+      </select>
+    </section>
+    <section class="space-y-4">
       <h2 class="text-sm font-medium text-slate-500">Account</h2>
       <button
         type="button"
@@ -70,16 +87,39 @@
 </template>
 
 <script setup lang="ts">
+import { getBrowserTimezone } from '~/composables/useTimezone'
+
 definePageMeta({ middleware: 'auth' })
 
 const { data: profile, refresh: refreshProfile } = useProfile()
 const displayName = ref(profile.value?.display_name ?? '')
 const partnerEmail = ref(profile.value?.partner_email ?? '')
+const timezone = ref(profile.value?.timezone ?? getBrowserTimezone())
+
+const timezoneOptions = computed(() => {
+  if (typeof Intl !== 'undefined' && 'supportedValuesOf' in Intl) {
+    return (Intl.supportedValuesOf('timeZone') as string[]).sort()
+  }
+  return [getBrowserTimezone()]
+})
+
+function timezoneLabel(tz: string): string {
+  try {
+    const date = new Date()
+    const abbr = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' })
+      .formatToParts(date)
+      .find((p) => p.type === 'timeZoneName')?.value ?? ''
+    return abbr ? `${tz} (${abbr})` : tz
+  } catch {
+    return tz
+  }
+}
 
 watch(profile, (p) => {
   if (p) {
     displayName.value = p.display_name ?? ''
     partnerEmail.value = p.partner_email ?? ''
+    timezone.value = p.timezone ?? getBrowserTimezone()
   }
 }, { deep: true })
 
@@ -136,6 +176,17 @@ async function clearPartner() {
   const { error } = await supabase.from('profiles').update({ partner_email: null }).eq('id', uid)
   if (error) {
     console.error('[clearPartner]', error)
+    return
+  }
+  await refreshProfile()
+}
+
+async function updateTimezone() {
+  const uid = userId.value
+  if (!uid) return
+  const { error } = await supabase.from('profiles').update({ timezone: timezone.value || null }).eq('id', uid)
+  if (error) {
+    console.error('[updateTimezone]', error)
     return
   }
   await refreshProfile()

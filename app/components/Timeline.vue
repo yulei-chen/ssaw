@@ -15,48 +15,14 @@
     <div class="flex">
       <!-- Hour labels -->
       <div class="flex w-6 flex-shrink-0 flex-col border-r border-slate-200 bg-slate-50/50">
-        <template v-if="earlyHoursCollapsed">
-          <button
-            type="button"
-            class="mx-0.5 flex shrink-0 items-center justify-center gap-1 rounded-md border border-slate-300 bg-slate-100 px-1.5 py-1 text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-200 hover:border-slate-400"
-            :style="{ height: `${EARLY_HOURS_COLLAPSED_HEIGHT}px` }"
-            aria-label="Expand hours 0–7"
-            @click="earlyHoursCollapsed = false"
-          >
-            <svg class="h-3 w-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          <div
-            v-for="h in 16"
-            :key="h + 7"
-            class="flex-1 border-t border-slate-100 px-1 py-0.5 text-right text-xs text-slate-500"
-            :style="{ height: `${PIXELS_PER_HOUR}px` }"
-          >
-            {{ String(h + 7).padStart(2, '0') }}
-          </div>
-        </template>
-        <template v-else>
-          <div
-            v-for="h in 24"
-            :key="h"
-            class="flex flex-col flex-1 items-center justify-between gap-0.5 border-t border-slate-100 px-1 py-0.5 text-right text-xs text-slate-500"
-            :style="{ height: `${PIXELS_PER_HOUR}px` }"
-          >
-            {{ String(h - 1).padStart(2, '0') }}
-            <button
-              v-if="h === 1"
-              type="button"
-              class="ml-0.5 flex h-12 w-5 shrink-0 items-center justify-center rounded-md border border-slate-300 bg-slate-100 text-slate-600 shadow-sm hover:bg-slate-200 hover:border-slate-400"
-              aria-label="Collapse 0–7"
-              @click="earlyHoursCollapsed = true"
-            >
-              <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
-              </svg>
-            </button>
-          </div>
-        </template>
+        <div
+          v-for="h in 24"
+          :key="h"
+          class="flex-1 border-t border-slate-100 px-1 py-0.5 text-right text-xs text-slate-500"
+          :style="{ height: `${PIXELS_PER_HOUR}px` }"
+        >
+          {{ String(h - 1).padStart(2, '0') }}
+        </div>
       </div>
       <!-- Timeline track -->
       <div
@@ -72,27 +38,12 @@
       >
         <!-- Time grid (every hour) -->
         <div class="absolute inset-0 flex flex-col">
-          <template v-if="earlyHoursCollapsed">
-            <div
-              class="flex-shrink-0 border-t border-slate-100"
-              :style="{ height: `${EARLY_HOURS_COLLAPSED_HEIGHT}px` }"
-              data-hour="0-7"
-            />
-            <div
-              v-for="h in 16"
-              :key="h + 7"
-              class="flex-1 border-t border-slate-100"
-              :data-hour="h + 7"
-            />
-          </template>
-          <template v-else>
-            <div
-              v-for="h in 24"
-              :key="h"
-              class="flex-1 border-t border-slate-100"
-              :data-hour="h - 1"
-            />
-          </template>
+          <div
+            v-for="h in 24"
+            :key="h"
+            class="flex-1 border-t border-slate-100"
+            :data-hour="h - 1"
+          />
         </div>
         <!-- Blocks -->
         <div
@@ -105,7 +56,7 @@
         >
           <div class="h-full min-h-0 overflow-hidden rounded">
             <div class="truncate px-2 py-1 text-xs font-medium text-slate-800">
-              {{ formatTime(block.start_time) }} – {{ formatTime(block.end_time) }}
+              {{ blockTimeLabel(block) }}
             </div>
             <div class="px-2 text-xs text-slate-600">
               {{ blockNote(block)?.content || 'No note' }}
@@ -149,6 +100,7 @@
 
 <script setup lang="ts">
 import type { TimeBlockWithNote } from '~/types'
+import { getDayUtcRange, getTimeInTimezone, formatHHmm } from '~/composables/useTimezone'
 
 const supabase = useSupabaseClient()
 
@@ -159,6 +111,7 @@ const props = defineProps<{
   loading?: boolean
   label: string
   avatarUrl?: string | null
+  displayTimezone: string
 }>()
 
 const emit = defineEmits<{
@@ -181,31 +134,13 @@ const dragPreview = computed(() => {
 
 const TOTAL_MINUTES = 24 * 60
 const PIXELS_PER_HOUR = 72
-const EARLY_HOURS_COLLAPSED_HEIGHT = 40
-
-const earlyHoursCollapsed = ref(true)
-
-const trackHeight = computed(() =>
-  earlyHoursCollapsed.value
-    ? EARLY_HOURS_COLLAPSED_HEIGHT + 16 * PIXELS_PER_HOUR
-    : 24 * PIXELS_PER_HOUR,
-)
+const trackHeight = 24 * PIXELS_PER_HOUR
 
 function pixelToTime(pixel: number): string {
-  const totalHeight = trackHeight.value
-  let minutes: number
-  if (earlyHoursCollapsed.value) {
-    if (pixel < EARLY_HOURS_COLLAPSED_HEIGHT) {
-      minutes = (pixel / EARLY_HOURS_COLLAPSED_HEIGHT) * 8 * 60
-    } else {
-      minutes = 8 * 60 + ((pixel - EARLY_HOURS_COLLAPSED_HEIGHT) / (16 * PIXELS_PER_HOUR)) * 16 * 60
-    }
-  } else {
-    minutes = (pixel / totalHeight) * TOTAL_MINUTES
-  }
-  minutes = Math.max(0, Math.min(TOTAL_MINUTES, Math.round(minutes)))
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
+  const minutes = (pixel / trackHeight) * TOTAL_MINUTES
+  const clamped = Math.max(0, Math.min(TOTAL_MINUTES, Math.round(minutes)))
+  const h = Math.floor(clamped / 60)
+  const m = clamped % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
@@ -214,19 +149,39 @@ function timeToPixel(time: string): number {
   const h = parts[0] ?? 0
   const m = parts[1] ?? 0
   const minutes = h * 60 + m
-  if (earlyHoursCollapsed.value) {
-    if (minutes < 8 * 60) {
-      return (minutes / (8 * 60)) * EARLY_HOURS_COLLAPSED_HEIGHT
-    }
-    return EARLY_HOURS_COLLAPSED_HEIGHT + ((minutes - 8 * 60) / (16 * 60)) * (16 * PIXELS_PER_HOUR)
+  return (minutes / TOTAL_MINUTES) * trackHeight
+}
+
+function blockLocalRange(
+  block: TimeBlockWithNote,
+  date: string,
+  tz: string,
+): { start: string; end: string } {
+  const { start: dayStart, end: dayEnd } = getDayUtcRange(date, tz)
+  const blockStart = block.start_at
+  const blockEnd = block.end_at
+  const displayStart = blockStart < dayStart ? dayStart : blockStart
+  const displayEnd = blockEnd > dayEnd ? dayEnd : blockEnd
+  const clippedToDayEnd = blockEnd > dayEnd
+  const startLocal = getTimeInTimezone(displayStart, tz)
+  const endLocal = getTimeInTimezone(displayEnd, tz)
+  const endHm = clippedToDayEnd ? '24:00' : formatHHmm(endLocal.hours, endLocal.minutes)
+  return {
+    start: formatHHmm(startLocal.hours, startLocal.minutes),
+    end: endHm,
   }
-  return (minutes / TOTAL_MINUTES) * 24 * PIXELS_PER_HOUR
 }
 
 function blockStyle(block: TimeBlockWithNote) {
-  const top = timeToPixel(block.start_time)
-  const height = timeToPixel(block.end_time) - top
+  const { start, end } = blockLocalRange(block, props.date, props.displayTimezone)
+  const top = timeToPixel(start)
+  const height = timeToPixel(end) - top
   return { top: `${top}px`, height: `${Math.max(height, 20)}px` }
+}
+
+function blockTimeLabel(block: TimeBlockWithNote): string {
+  const { start, end } = blockLocalRange(block, props.date, props.displayTimezone)
+  return `${formatTime(start)} – ${formatTime(end)}`
 }
 
 const blockColors = [

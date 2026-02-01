@@ -4,14 +4,14 @@ export interface Profile {
   display_name: string | null
   avatar_url: string | null
   partner_email: string | null
+  timezone: string | null
 }
 
 export interface TimeBlock {
   id: string
   user_id: string
-  day: string
-  start_time: string
-  end_time: string
+  start_at: string
+  end_at: string
   created_at: string
 }
 
