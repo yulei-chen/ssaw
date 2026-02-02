@@ -14,6 +14,7 @@
           :display-timezone="myTimezone"
           @create-block="openBlockNoteModal"
           @block-click="openBlockNoteModal"
+          @resize-block="onResizeBlock"
         />
         <Timeline
           v-if="partner"
@@ -51,6 +52,8 @@ import { useStorage } from '@vueuse/core'
 import { getBrowserTimezone } from '~/composables/useTimezone'
 
 definePageMeta({ middleware: 'auth' })
+
+const supabase = useSupabaseClient()
 
 function todayInTimezone(tz: string): string {
   const z = toZonedTime(new Date(), tz)
@@ -110,7 +113,7 @@ function onMatched() {
 function openBlockNoteModal(
   payload?:
     | { startTime: string; endTime: string }
-    | { id: string; start_at: string; end_at: string; block_notes?: { id: string }[] },
+    | import('~/types').TimeBlockWithNote,
 ) {
   if (payload && 'startTime' in payload) {
     editingBlock.value = { startTime: payload.startTime, endTime: payload.endTime }
@@ -134,6 +137,22 @@ function openPartnerBlockModal(block: import('~/types').TimeBlockWithNote) {
 function onBlockSaved() {
   blockNoteOpen.value = false
   editingBlock.value = null
+  refreshMyBlocks()
+}
+
+async function onResizeBlock(
+  blockId: string,
+  payload: { start_at: string; end_at: string },
+) {
+  const { error } = await supabase
+    .from('time_blocks')
+    // @ts-expect-error Supabase generated types may not include update payload for time_blocks
+    .update({ start_at: payload.start_at, end_at: payload.end_at })
+    .eq('id', blockId)
+  if (error) {
+    console.error('[index] resize block', error)
+    return
+  }
   refreshMyBlocks()
 }
 

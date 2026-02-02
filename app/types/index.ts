@@ -33,6 +33,7 @@ export interface BlockNote {
   id: string
   time_block_id: string
   content: string
+  status?: 'todo' | 'done'
   created_at: string
 }
 

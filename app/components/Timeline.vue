@@ -60,9 +60,31 @@
           :key="block.id"
           class="absolute left-1 right-1 rounded border border-slate-300"
           :style="blockStyle(block)"
-          :class="[blockColorClass(index), 'cursor-pointer transition-shadow hover:ring-2 hover:ring-slate-200 hover:ring-offset-2 hover:ring-offset-white hover:shadow-md']"
+          :class="[
+            blockColorClass(index),
+            isTodoBlock(block) ? 'opacity-50' : '',
+            'cursor-pointer transition-shadow hover:ring-2 hover:ring-slate-200 hover:ring-offset-2 hover:ring-offset-white hover:shadow-md',
+          ]"
+          @mousedown.stop
           @click="onBlockClick(block)"
         >
+          <!-- Resize handles (own timeline only) -->
+          <template v-if="mode === 'own'">
+            <div
+              class="absolute left-0 right-0 -top-2 z-1 h-5 cursor-ns-resize rounded-t"
+              aria-label="Resize start time"
+              @mousedown.stop="startResize(block, 'top', $event)"
+              @click.stop
+              @touchstart.stop.passive="startResizeTouch(block, 'top', $event)"
+            />
+            <div
+              class="absolute -bottom-2 left-0 right-0 z-1 h-5 cursor-ns-resize rounded-b"
+              aria-label="Resize end time"
+              @mousedown.stop="startResize(block, 'bottom', $event)"
+              @click.stop
+              @touchstart.stop.passive="startResizeTouch(block, 'bottom', $event)"
+            />
+          </template>
           <div class="h-full min-h-0 overflow-hidden rounded">
             <div class="truncate px-2 py-1 text-xs font-medium text-slate-800">
               {{ blockTimeLabel(block) }}
@@ -110,7 +132,7 @@
 <script setup lang="ts">
 import type { TimeBlockWithNote } from '~/types'
 import { toZonedTime } from 'date-fns-tz'
-import { getDayUtcRange, getTimeInTimezone, formatHHmm } from '~/composables/useTimezone'
+import { getDayUtcRange, getTimeInTimezone, formatHHmm, toUtc } from '~/composables/useTimezone'
 
 const supabase = useSupabaseClient()
 
@@ -127,6 +149,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   createBlock: [payload: { startTime: string; endTime: string }]
   blockClick: [block: TimeBlockWithNote]
+  resizeBlock: [blockId: string, payload: { start_at: string; end_at: string }]
 }>()
 
 const trackRef = ref<HTMLElement | null>(null)
@@ -134,12 +157,50 @@ const dragging = ref(false)
 const dragStartY = ref(0)
 const dragEndY = ref(0)
 
+const MIN_RESIZE_MINUTES = 15
+type ResizeEdge = 'top' | 'bottom'
+const resizing = ref<{
+  block: TimeBlockWithNote
+  edge: ResizeEdge
+  originalStart: string
+  originalEnd: string
+  currentY: number
+} | null>(null)
+
 const dragPreview = computed(() => {
   if (!dragging.value || trackRef.value == null) return null
   const start = pixelToTime(Math.min(dragStartY.value, dragEndY.value))
   const end = pixelToTime(Math.max(dragStartY.value, dragEndY.value))
   if (start === end) return null
   return { start, end }
+})
+
+function hhmmToMinutes(hhmm: string): number {
+  if (hhmm === '24:00') return TOTAL_MINUTES
+  const [h, m] = hhmm.split(':').map(Number)
+  return (h ?? 0) * 60 + (m ?? 0)
+}
+
+function minutesToHhmm(min: number): string {
+  const clamped = Math.max(0, Math.min(TOTAL_MINUTES, Math.round(min)))
+  const h = Math.floor(clamped / 60)
+  const m = clamped % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+const resizePreview = computed(() => {
+  const r = resizing.value
+  if (!r) return null
+  const newTime = pixelToTime(r.currentY)
+  const newMin = hhmmToMinutes(newTime)
+  const origStartMin = hhmmToMinutes(r.originalStart)
+  const origEndMin = hhmmToMinutes(r.originalEnd)
+  if (r.edge === 'top') {
+    const clampedStartMin = Math.max(0, Math.min(newMin, origEndMin - MIN_RESIZE_MINUTES))
+    return { start: minutesToHhmm(clampedStartMin), end: r.originalEnd }
+  }
+  const clampedEndMin = Math.min(TOTAL_MINUTES, Math.max(newMin, origStartMin + MIN_RESIZE_MINUTES))
+  return { start: r.originalStart, end: minutesToHhmm(clampedEndMin) }
 })
 
 const TOTAL_MINUTES = 24 * 60
@@ -198,7 +259,8 @@ function blockLocalRange(
 }
 
 function blockStyle(block: TimeBlockWithNote) {
-  const { start, end } = blockLocalRange(block, props.date, props.displayTimezone)
+  const preview = resizing.value?.block.id === block.id ? resizePreview.value : null
+  const { start, end } = preview ?? blockLocalRange(block, props.date, props.displayTimezone)
   const top = timeToPixel(start)
   const height = timeToPixel(end) - top
   return { top: `${top}px`, height: `${Math.max(height, 20)}px` }
@@ -240,7 +302,11 @@ function formatTime(t: string) {
   return `${h}:${String(m).padStart(2, '0')}`
 }
 
-function blockNote(block: TimeBlockWithNote): { content?: string; block_note_attachments?: { file_path: string }[]; comments?: { body: string; created_at: string; user_id?: string }[] } | null {
+function isTodoBlock(block: TimeBlockWithNote): boolean {
+  return blockNote(block)?.status === 'todo'
+}
+
+function blockNote(block: TimeBlockWithNote): { content?: string; status?: 'todo' | 'done'; block_note_attachments?: { file_path: string }[]; comments?: { body: string; created_at: string; user_id?: string }[] } | null {
   const notes = block.block_notes
   if (!notes) return null
   // Supabase returns single object for 1:1 relation, array for 1:many
@@ -332,6 +398,65 @@ function onTouchMoveWithPrevent(e: TouchEvent) {
 
 function onTouchEnd() {
   finishDrag()
+}
+
+function startResize(block: TimeBlockWithNote, edge: ResizeEdge, e: MouseEvent) {
+  if (props.mode !== 'own' || !trackRef.value) return
+  const { start, end } = blockLocalRange(block, props.date, props.displayTimezone)
+  resizing.value = {
+    block,
+    edge,
+    originalStart: start,
+    originalEnd: end,
+    currentY: getYFromClient(e.clientY),
+  }
+  document.addEventListener('mousemove', onResizeMove)
+  document.addEventListener('mouseup', onResizeEnd)
+}
+
+function startResizeTouch(block: TimeBlockWithNote, edge: ResizeEdge, e: TouchEvent) {
+  const touch = e.touches[0]
+  if (!touch || props.mode !== 'own' || !trackRef.value) return
+  const { start, end } = blockLocalRange(block, props.date, props.displayTimezone)
+  resizing.value = {
+    block,
+    edge,
+    originalStart: start,
+    originalEnd: end,
+    currentY: getYFromClient(touch.clientY),
+  }
+  document.addEventListener('touchmove', onResizeTouchMove, { passive: false })
+  document.addEventListener('touchend', onResizeEnd)
+  document.addEventListener('touchcancel', onResizeEnd)
+}
+
+function onResizeMove(e: MouseEvent) {
+  if (!resizing.value || !trackRef.value) return
+  resizing.value = { ...resizing.value, currentY: getYFromClient(e.clientY) }
+}
+
+function onResizeTouchMove(e: TouchEvent) {
+  const touch = e.touches[0]
+  if (!touch || !resizing.value || !trackRef.value) return
+  e.preventDefault()
+  resizing.value = { ...resizing.value, currentY: getYFromClient(touch.clientY) }
+}
+
+function onResizeEnd() {
+  const r = resizing.value
+  if (!r) return
+  document.removeEventListener('mousemove', onResizeMove)
+  document.removeEventListener('mouseup', onResizeEnd)
+  document.removeEventListener('touchmove', onResizeTouchMove)
+  document.removeEventListener('touchend', onResizeEnd)
+  document.removeEventListener('touchcancel', onResizeEnd)
+  const preview = resizePreview.value
+  if (preview) {
+    const start_at = toUtc(props.date, preview.start, props.displayTimezone)
+    const end_at = toUtc(props.date, preview.end, props.displayTimezone)
+    emit('resizeBlock', r.block.id, { start_at, end_at })
+  }
+  resizing.value = null
 }
 
 function onBlockClick(block: TimeBlockWithNote) {

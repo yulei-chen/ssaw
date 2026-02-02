@@ -84,6 +84,17 @@
             </div>
           </div>
         </div>
+        <div class="flex items-center gap-4">
+          <span class="text-sm font-medium text-slate-700">Status</span>
+          <label class="flex cursor-pointer items-center gap-2">
+            <input v-model="status" type="radio" value="todo" class="text-slate-600 focus:ring-slate-500" />
+            <span class="text-sm text-slate-700">Todo</span>
+          </label>
+          <label class="flex cursor-pointer items-center gap-2">
+            <input v-model="status" type="radio" value="done" class="text-slate-600 focus:ring-slate-500" />
+            <span class="text-sm text-slate-700">Done</span>
+          </label>
+        </div>
         <p v-if="timeRangeError" class="text-sm text-red-600">{{ timeRangeError }}</p>
       </div>
       <form class="space-y-4" @submit.prevent="save">
@@ -266,6 +277,7 @@ const timeRangeError = computed(() => {
   return null
 })
 const content = ref('')
+const status = ref<'todo' | 'done'>('done')
 const noteId = ref<string | null>(null)
 const attachments = ref<AttachmentWithUrl[]>([])
 const pendingFiles = ref<File[]>([])
@@ -294,6 +306,7 @@ function revokePendingPreviews() {
 
 watch(() => props.timeBlock, async (block) => {
   content.value = ''
+  status.value = 'done'
   noteId.value = null
   attachments.value = []
   revokePendingPreviews()
@@ -302,12 +315,13 @@ watch(() => props.timeBlock, async (block) => {
   if (blockId) {
     const { data } = await supabase
       .from('block_notes')
-      .select('id, content, block_note_attachments(file_path)')
+      .select('id, content, status, block_note_attachments(file_path)')
       .eq('time_block_id', blockId)
       .single()
     if (data) {
-      const row = data as { id: string; content: string; block_note_attachments: { file_path: string }[] }
+      const row = data as { id: string; content: string; status?: 'todo' | 'done'; block_note_attachments: { file_path: string }[] }
       content.value = row.content ?? ''
+      status.value = row.status === 'todo' ? 'todo' : 'done'
       noteId.value = row.id
       const list = Array.isArray(row.block_note_attachments) ? row.block_note_attachments : []
       attachments.value = list.map((a) => ({ file_path: a.file_path, url: getPublicUrl(a.file_path) }))
@@ -411,12 +425,12 @@ async function save() {
     const { data: existingNote } = await supabase.from('block_notes').select('id').eq('time_block_id', timeBlockId).single()
     if (existingNote) {
       currentNoteId = (existingNote as { id: string }).id
-      await supabase.from('block_notes').update({ content: content.value }).eq('id', currentNoteId)
+      await supabase.from('block_notes').update({ content: content.value, status: status.value }).eq('id', currentNoteId)
       noteId.value = currentNoteId
     } else {
       const { data: newNote } = await supabase
         .from('block_notes')
-        .insert({ time_block_id: timeBlockId, content: content.value })
+        .insert({ time_block_id: timeBlockId, content: content.value, status: status.value })
         .select('id')
         .single()
       if (newNote) {
